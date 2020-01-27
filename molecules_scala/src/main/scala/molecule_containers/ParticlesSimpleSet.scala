@@ -2,7 +2,6 @@ package molecules
 
 import domain.Particle
 import domain.vector._
-import molecules.ParticlesAbstractContainer
 
 class ParticlesSimpleSet[VectorType <: AlgebraicVector[VectorType]](
   val particles: Seq[Particle[VectorType]]
