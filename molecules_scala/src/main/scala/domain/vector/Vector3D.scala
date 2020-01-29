@@ -2,10 +2,10 @@ package domain.vector
 
 import domain.Particle
 import domain.vector._
-import scala.math.sqrt;
+import scala.math.sqrt
 
 
-class Vector3D(val x: Double = 0.0, val y: Double = 0.0, val z: Double = 0.0) extends AlgebraicVector[Vector3D] {
+case class Vector3D(x: Double = 0.0, y: Double = 0.0, z: Double = 0.0) extends AlgebraicVector[Vector3D] {
   def length: Double = sqrt(x*x + y*y + z*z)
 
   def scale(factor: Double): Vector3D = Vector3D(x * factor, y * factor, z * factor)
@@ -24,14 +24,11 @@ class Vector3D(val x: Double = 0.0, val y: Double = 0.0, val z: Double = 0.0) ex
     Vector3D(mapFn(x), mapFn(y), mapFn(z))
   }
 
-  override def toString(): String = {
-    s"(${this.x}, ${this.y}, ${this.z})"
+  override def toString: String = {
+    s"($x, $y, $z)"
   }
 }
 
 object Vector3D {
     val empty: Vector3D = Vector3D()
-    def apply(x: Double = 0.0, y: Double = 0.0, z: Double = 0.0): Vector3D = {
-        new Vector3D(x, y, z)
-    }
 }
