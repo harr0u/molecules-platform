@@ -28,9 +28,9 @@ case class Vector2D(x: Double = 0.0, y: Double = 0.0) extends AlgebraicVector[Ve
     Vector2D(mapFn(x), mapFn(y))
   }
 
-  override def toString: String = {
-    s"($x, $y)"
-  }
+//  override def toString: String = {
+//    s"($x, $y)"
+//  }
 }
 
 //object LL {

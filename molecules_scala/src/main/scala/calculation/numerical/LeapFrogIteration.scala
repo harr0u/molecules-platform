@@ -1,32 +1,33 @@
 package calculation.numerical
 
+import calculation.geometry.figures.GeometricFigure
+import calculation.limit_conditions.LimitConditions
 import calculation.physics.PotentialCalculator
-import domain.Particle
 import domain.vector._
 import molecules.ParticlesAbstractContainer
 
 
-class LeapFrogIteration[VectorType <: AlgebraicVector[VectorType]](
+class LeapFrogIteration[VectorType <: AlgebraicVector[VectorType], BoundariesType <: GeometricFigure](
                                                                     val particles: ParticlesAbstractContainer[VectorType],
                                                                     val potentialCalculator: PotentialCalculator[VectorType],
+                                                                    val limitConditions: LimitConditions[VectorType, BoundariesType],
                                                                     val deltaStepTime: Double = 0.0001
 ) extends IterationStepPerformer {
   def init(): Unit = {
-    entirelyRecomputeForcesAndPotentials()
+    this.entirelyRecomputeForcesAndPotentials()
   }
 
   private val deltaStepTimeSquared: Double = deltaStepTime * deltaStepTime
   def iterationStep(): Unit = {
-    for (particle: Particle[VectorType] <- particles.particlesStream) {
+
+    for (particle <- particles.particlesStream) {
         particle.position = particle.position + particle.velocity * deltaStepTime + particle.acceleration * (deltaStepTimeSquared / 2);
         particle.velocity = particle.velocity + particle.acceleration * (deltaStepTime / 2);
     }
-    // TODO?: limit conditions in iterator, limit conditions in potential computing...
-    // TODO?: make limit conditions part of box class?
-    // TODO?: limit condition for force vector and limit condition after molecule translating are different? :)
-    particles.limitConditions()
 
-    entirelyRecomputeForcesAndPotentials()
+    particles.particlesStream.foreach((p) => limitConditions.positionLimitCondition(p.position))
+
+    this.entirelyRecomputeForcesAndPotentials()
 
     for (particle <- particles.particlesStream) {
       particle.velocity = particle.velocity + particle.acceleration * (deltaStepTime / 2)
@@ -38,8 +39,7 @@ class LeapFrogIteration[VectorType <: AlgebraicVector[VectorType]](
 
     for ((particle1, particle2) <- particles.particlePairsStream) {
       val (force: VectorType, potential: Double) = potentialCalculator.computeForceAndPotential(
-        particle1.position,
-        particle2.position
+        limitConditions.distanceLimitCondition(particle2.position - particle1.position)
       )
 
       particle1.force = particle1.force + force

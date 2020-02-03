@@ -15,8 +15,4 @@ class ParticlesSimpleSet[VectorType <: AlgebraicVector[VectorType]](
       particle2 <- particlesStream.takeRight(particlesNumber - i - 1)
     } yield (particle1, particle2)
   }
-
-  // I need some container box parametera
-  // TODO: make class for box parameters
-  def limitConditions(): Unit = { }
 }

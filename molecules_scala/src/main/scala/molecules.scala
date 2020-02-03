@@ -1,22 +1,24 @@
+import calculation.geometry.figures.{Cube, CubicFigure}
+import calculation.limit_conditions.BoxLimitConditions
 import domain.Particle
 import domain.vector._
 import molecules.ParticlesSimpleSet
 import calculation.numerical.LeapFrogIteration
-import calculation.physics.PeriodicLennardJonesPotential
+import calculation.physics.LennardJonesPotential
 
 object Molecules extends App {
-  val particleX: Particle[Vector2D] = new Particle[Vector2D](Vector2D(1, 8), Vector2D.empty)
-  val particleY: Particle[Vector2D] = new Particle[Vector2D](Vector2D(2, -3), Vector2D.empty)
-
-  val molecules: ParticlesSimpleSet[Vector2D] = new ParticlesSimpleSet(List(particleX, particleY));
-  molecules.limitConditions()
+  val particleX: Particle[Vector3D] = new Particle[Vector3D](Vector3D(1, 8), Vector3D.empty)
+  val particleY: Particle[Vector3D] = new Particle[Vector3D](Vector3D(2, -3), Vector3D.empty)
 
   val boxWidth: Double = 100.0
 
-  val potentialCalculator = new PeriodicLennardJonesPotential[Vector2D](boxWidth)
-  println(potentialCalculator.computeForceAndPotential(particleX.position, particleY.position))
+  val iterator: LeapFrogIteration[Vector3D, Cube] = new LeapFrogIteration(
+    new ParticlesSimpleSet[Vector3D](List(particleX, particleY)),
+    new LennardJonesPotential[Vector3D](),
+    new BoxLimitConditions(new Cube(boxWidth))
+  )
 
-  val iterator: LeapFrogIteration[Vector2D] = new LeapFrogIteration(molecules, potentialCalculator)
+
   iterator.init()
   iterator.iterationStep()
 }
