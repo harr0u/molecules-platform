@@ -22,8 +22,8 @@ abstract class ParticlesCells3D(
 
   // To find it need data about Box (width, height, length)
   protected val layersNumber: Int // cells.length
-  protected val rowsNumber: Int// layer.length
-  protected val cellsNumber: Int // row.length
+  protected val rowsNumber: Int   // layer.length
+  protected val cellsNumber: Int  // row.length
 
   private val emptyCells: Cells = Seq(1 to layersNumber).map (_ =>
                                     Seq(1 to rowsNumber).map(_ =>
