@@ -38,7 +38,7 @@ class LeapFrogIteration[VectorType <: AlgebraicVector[VectorType], BoundariesTyp
     particles.particlesStream.foreach(_.clearForceAndPotential())
 
     for ((particle1, particle2) <- particles.particlePairsStream) {
-      val (force: VectorType, potential: Double) = potentialCalculator.computeForceAndPotential(
+      val (force, potential: Double) = potentialCalculator.computeForceAndPotential(
         limitConditions.distanceLimitCondition(particle2.position - particle1.position)
       )
 

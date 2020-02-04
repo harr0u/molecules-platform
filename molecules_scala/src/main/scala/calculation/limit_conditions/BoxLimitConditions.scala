@@ -9,7 +9,7 @@ class BoxLimitConditions(override val boundaries: CubicFigure) extends LimitCond
   override def positionLimitCondition(position: Vector3D): Vector3D = {
     val coordinateLimit = (coordinate: Double, length: Double) => {
       val coordinate_ = coordinate % length // -2 % 5 == -2
-      if (coordinate_ < 0) length - coordinate_ else coordinate_ // -2 -> 3
+      if (coordinate_ < 0) length + coordinate_ else coordinate_ // -2 -> 3
     }
 
     this.applyLimitConditions(position, coordinateLimit)
@@ -17,7 +17,11 @@ class BoxLimitConditions(override val boundaries: CubicFigure) extends LimitCond
 
   override def distanceLimitCondition(distance: Vector3D): Vector3D = {
     val coordinateLimit = (coordinate: Double, length: Double) => {
-      if (Math.abs(coordinate) > (length / 2)) length - Math.abs(coordinate) else coordinate
+      if (Math.abs(coordinate) > (length / 2)) {
+        -1 * coordinate.sign * (length - Math.abs(coordinate))
+      } else {
+        coordinate
+      }
     }
 
     this.applyLimitConditions(distance, coordinateLimit)

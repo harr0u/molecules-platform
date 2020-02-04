@@ -1,5 +1,6 @@
 package molecule_containers
 
+import calculation.geometry.figures.CubicFigure
 import calculation.limit_conditions.LimitConditions
 
 import collection.Seq
@@ -9,7 +10,7 @@ import molecules.ParticlesAbstractContainer
 
 abstract class ParticlesCells3D(
                                  val particles: Seq[Particle[Vector3D]],
-                                 val limitConditions: LimitConditions[Vector3D]
+                                 val limitConditions: LimitConditions[Vector3D, CubicFigure]
                                ) extends ParticlesAbstractContainer[Vector3D]{
   type Cell = Seq[Particle[Vector3D]] // Maybe mutable?
 
@@ -30,6 +31,10 @@ abstract class ParticlesCells3D(
                                         Seq[Particle[Vector3D]]())))
 
   // State monad?
+  // TODO???: make certain amount of unified actions (events) of changing molecules state [AddVelocity, DropAcceleration]
+  // TODO???: Finding reason why x10^15 Energy in 2 frames will become much easier
+  // [Action of changing molecule] -> (Apply Action, update part which requires it)
+  // TODO??????: currentCells != State Monad, rework ParticlesAbstractContainer to something similar to Redux
   private var currentCells: Cells = emptyCells
   private def getCell(layerId: Int, rowId: Int, columnId: Int): Cell = currentCells(layerId)(rowId)(columnId)
 
@@ -40,17 +45,9 @@ abstract class ParticlesCells3D(
                                                         .to(LazyList)
 
   def particlePairsStream: LazyList[(Particle[Vector3D], Particle[Vector3D])] = {
-    updateCells()
-
     for {
       (particle1, i) <- particlesStream.zipWithIndex
       particle2 <- particlesStream.takeRight(particlesNumber - i - 1)
     } yield (particle1, particle2)
-  }
-
-  private def updateCells(): Unit = {
-    this.particlesStream.fold(emptyCells)((cellsAcc: Cells, particle: Particle[Vector3D]) => {
-      val cellIndex: Int = Math.floor()
-    })
   }
 }

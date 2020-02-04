@@ -19,6 +19,10 @@ class Particle[VectorType <: AlgebraicVector[VectorType]](var position: VectorTy
     force = force.zero
     potential = 0.0
   }
+
+  override def toString: String = {
+    s"Particle(${position.toString}, ${velocity.toString()})"
+  }
 }
 
 object Particle {
