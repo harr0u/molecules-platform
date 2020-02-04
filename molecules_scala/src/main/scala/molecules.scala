@@ -33,7 +33,7 @@ object Molecules extends App {
       )
     }
 
-    new ParticlesSimpleSet(particles)
+    new ParticlesCells3D(particles, box)
   }
 
   val makeIteration: () => LeapFrogIteration[Vector3D, CubicFigure] = () => new LeapFrogIteration(
