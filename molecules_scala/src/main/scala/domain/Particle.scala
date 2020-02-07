@@ -1,6 +1,6 @@
 package domain
 
-import domain.vector.AlgebraicVector
+import domain.geometry.vector.AlgebraicVector
 
 case class Particle[V <: AlgebraicVector[V]](
   id: Int,

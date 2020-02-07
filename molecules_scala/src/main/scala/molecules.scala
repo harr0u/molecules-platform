@@ -3,11 +3,11 @@ import java.io.{BufferedWriter, File, FileWriter}
 import calculation.geometry.figures.{Cube, CubicFigure}
 import calculation.limit_conditions.BoxLimitConditions
 import domain.Particle
-import domain.vector._
-import molecules.ParticlesSimpleSet
+import domain.geometry.vector._
+import molecules.ParticlesSimpleState
 import calculation.numerical.LeapFrogIteration
 import calculation.physics.LennardJonesPotential
-import molecule_containers.ParticlesCells3D
+import state.ParticlesCells3D
 
 
 object Molecules extends App {

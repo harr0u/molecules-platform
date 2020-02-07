@@ -1,6 +1,6 @@
 import org.scalatest._
 import domain.Particle
-import domain.vector._
+import domain.geometry.vector._
 
 class ParticleSpec extends FlatSpec with Matchers {
 //  "A Particle" should "change its position after translating" in {

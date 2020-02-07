@@ -1,8 +1,7 @@
 package calculation.limit_conditions
 
-import calculation.geometry.figures.{Box, Cube, CubicFigure, GeometricFigure}
-import domain.vector.Vector3D
-import sun.security.util.Length
+import domain.geometry.figures.{Box, Cube, CubicFigure}
+import domain.geometry.vector.Vector3D
 
 class BoxLimitConditions(override val boundaries: CubicFigure) extends LimitConditions[Vector3D, CubicFigure] {
 

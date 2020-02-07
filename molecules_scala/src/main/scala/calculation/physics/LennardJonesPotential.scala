@@ -1,7 +1,7 @@
 package calculation.physics
 
 import domain.Particle
-import domain.vector._
+import domain.geometry.vector._
 
 class LennardJonesPotential[VectorType <: AlgebraicVector[VectorType]] extends PotentialCalculator[VectorType] {
   def computeForceAndPotential(distance: VectorType): (VectorType, Double) = {

@@ -1,7 +1,7 @@
-package domain.vector
+package domain.geometry.vector
 
 import domain.Particle
-import domain.vector._
+import domain.geometry.vector._
 import scala.math.sqrt
 
 
