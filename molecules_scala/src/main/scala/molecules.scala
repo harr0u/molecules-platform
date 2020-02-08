@@ -8,18 +8,19 @@ import calculation.physics.LennardJonesPotential
 import domain.geometry.figures.{Cube, CubicFigure}
 import state.{ParticlesPhysicsReducer, ParticlesSeqState, PeriodicParticlesCells3D}
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 
 object Molecules extends App {
-  val boxWidth: Double = 13.0
+  val boxWidth: Double = 50.0
 
   val box: BoxLimitConditions = new BoxLimitConditions(Cube(boxWidth));
 
-  val superSmartMolecules = () => {
+  val superSmartMolecules = (smart: Boolean) => {
     val velocityFactor = 0.12;
-    val sideNumber = 5;
+    val sideNumber = 25;
     val particles: Seq[Particle[Vector3D]] = for {
       i <- 0 until sideNumber
       j <- 0 until sideNumber
@@ -35,11 +36,11 @@ object Molecules extends App {
       )
     }
 
-    new ParticlesSeqState(particles)
+    if (smart) PeriodicParticlesCells3D.create(particles, box, 3.0) else ParticlesSeqState(particles)
   }
 
   val makeIteration: () => Future[LeapFrogIteration[Vector3D, CubicFigure]] = () => new LeapFrogIteration(
-    superSmartMolecules(),
+    superSmartMolecules(true),
     new ParticlesPhysicsReducer(),
     new LennardJonesPotential(),
     box,
@@ -56,17 +57,21 @@ object Molecules extends App {
       val kineticEnergy: Double = iteration.particles.counit.map((p) => Math.pow(p.velocity.length, 2) / 2).iterator.sum
       val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum
       val total: Double = kineticEnergy + potential
-
       (total, System.currentTimeMillis)
     })
   })
 
-  val numberOfFrames = 10000
+  val numberOfFrames = 20
+  val firstFrame = framesHistory(0)
+  val lastFrame = framesHistory(numberOfFrames - 1)
 
-  for {
-    (initialTotal, initialEpoch) <- framesHistory(0)
-    (lastTotal, lastEpoch) <- framesHistory(numberOfFrames - 1)
+
+  val kek = for {
+    (initialTotal, initialEpoch) <- firstFrame
+    (lastTotal, lastEpoch) <- lastFrame
   } yield {
     println(f"Total change = ${lastTotal - initialTotal}; FPS = ${numberOfFrames * 1000.0 / (lastEpoch - initialEpoch)}")
   }
+
+  Await.result(kek, Duration.Inf)
 }

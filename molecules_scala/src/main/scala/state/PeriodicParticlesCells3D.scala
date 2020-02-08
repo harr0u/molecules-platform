@@ -5,13 +5,14 @@ import calculation.limit_conditions.LimitConditions
 import domain.Particle
 import domain.geometry.vector.Vector3D
 
+import scala.collection.immutable.Queue
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class PeriodicParticlesCells3D(
   limitConditions: LimitConditions[Vector3D, CubicFigure],
   cellsMetadata: ParticlesCellMetadata,
-  private val currentFlatCells: Seq[Seq[Particle[Vector3D]]],
+  private val currentFlatCells: Vector[Seq[Particle[Vector3D]]],
   minimumCellLength: Double = 5.0
 ) extends ParticlesState[Vector3D, Future] {
 
@@ -21,17 +22,43 @@ case class PeriodicParticlesCells3D(
   override def counit: LazyList[Particle[Vector3D]] = currentFlatCells.reduce(_ ++ _).to(LazyList)
 
   override def map(fn: Particle[Vector3D] => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
-    val mapFutures: Seq[Future[Seq[Particle[Vector3D]]]] = for (cell <- currentFlatCells) yield {
-      Future[Seq[Particle[Vector3D]]] {
-        for (particle: Particle[Vector3D] <- cell) yield fn(particle);
+    val mapFutures: Seq[Future[(Queue[Particle[Vector3D]], Queue[(Particle[Vector3D], Int)])]] = for {
+      (cell, i) <- currentFlatCells.zipWithIndex
+    } yield {
+      Future[(Queue[Particle[Vector3D]], Queue[(Particle[Vector3D], Int)])] {
+        cell.foldLeft((Queue[Particle[Vector3D]](), Queue[(Particle[Vector3D], Int)]()))((acc, particle) => {
+          val (rest, left) = acc
+
+          val newParticle = fn(particle)
+          if (newParticle.position == particle.position) {
+            (rest.appended(newParticle), left)
+          } else {
+            PeriodicParticlesCells3D.getFlatCellIndexOfParticle(this.cellsMetadata)(newParticle)
+              .map((newIndex) => (rest, left.appended((newParticle, newIndex))))
+              .getOrElse((rest.appended(newParticle), left))
+          }
+        })
       }
     }
 
-    Future.sequence(mapFutures).map((newFlatCells) => this.copy(currentFlatCells = newFlatCells))
+    Future.sequence(mapFutures).map(computedFlatCells => {
+      val restParticlesFromCells: Vector[Seq[Particle[Vector3D]]] = computedFlatCells.map(_._1).toVector
+      val leftParticlesFromCells: Seq[Queue[(Particle[Vector3D], Int)]] = computedFlatCells.map(_._2)
+
+      val newParticleCells: Vector[Seq[Particle[Vector3D]]] = leftParticlesFromCells.foldLeft(restParticlesFromCells)((particlesAcc, leftParticlesFromCell) => {
+        leftParticlesFromCell.foldLeft(particlesAcc)((particlesAcc1, leftParticleWithIndex) => {
+          val (leftParticle, newCellIndex) = leftParticleWithIndex
+          particlesAcc1.updated(newCellIndex, particlesAcc1(newCellIndex).appended(leftParticle))
+        })
+      })
+
+      this.copy(currentFlatCells = newParticleCells)
+    })
   }
 
+  // TODO implement reduce via map to use update particle cell logic
   override def particlesReduce(fn: (Particle[Vector3D], Particle[Vector3D]) => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
-    val reduceFutures: Seq[Future[Seq[Particle[Vector3D]]]] = for ((cell, i) <- currentFlatCells.zipWithIndex) yield {
+    val reduceFutures: Vector[Future[Seq[Particle[Vector3D]]]] = for ((cell, i) <- currentFlatCells.zipWithIndex) yield {
       Future[Seq[Particle[Vector3D]]] {
         PeriodicParticlesCells3D.flatIndex2Indexes(this.cellsMetadata)(i) map { case (layerIndex, rowIndex, cellIndex) => {
           // TODO should use limit conditions to determine what to do in corner cases (-1, -1, 0)?
@@ -61,7 +88,7 @@ case class PeriodicParticlesCells3D(
           cell.map((particle) => {
             cellsInvolvedInComputation.foldLeft(particle)((accParticle, cell) => {
               cell.foldLeft(accParticle)((accParticle1, otherParticle) => {
-                fn(accParticle1, otherParticle)
+                if (accParticle1.id != otherParticle.id) fn(accParticle1, otherParticle) else accParticle1
               })
             })
           })

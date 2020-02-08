@@ -51,7 +51,6 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
     val (force, potential: Double) = potentialCalculator.computeForceAndPotential(
       limitConditions.distanceLimitCondition(particle2.position - particle1.position)
     )
-
     val updatedParticle1 = particle1.copy(force = particle1.force + force, potential = particle1.potential + potential)
     val updatedParticle2 = particle2.copy(force = particle2.force - force, potential = particle2.potential + potential)
 
