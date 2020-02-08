@@ -16,7 +16,7 @@ import scala.util.Random
 
 
 object Molecules extends App {
-  val boxWidth: Double = 15.0
+  val boxWidth: Double = 35.0
 
   val box: BoxLimitConditions = new BoxLimitConditions(Cube(boxWidth));
 
@@ -24,7 +24,7 @@ object Molecules extends App {
     val rng = new Random(0L)
 
     val velocityFactor = 0.5;
-    val sideNumber = 15;
+    val sideNumber = 25;
     val particles: Seq[Particle[Vector3D]] = for {
       i <- 0 until sideNumber
       j <- 0 until sideNumber
@@ -59,16 +59,19 @@ object Molecules extends App {
     iter => iter.flatMap(iteration => iteration.iterationStep())
   )
 
-  val framesHistory: LazyList[Future[(Double, Long)]] = moleculesLog.map((iter: Future[LeapFrogIteration[Vector3D, CubicFigure]]) => {
-    iter.map((iteration) => {
-      val kineticEnergy: Double = iteration.particles.counit.map((p) => Math.pow(p.velocity.length, 2) / 2).iterator.sum / numberOfParticles
-      val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum / numberOfParticles
-      val total: Double = kineticEnergy + potential
-      (total, System.currentTimeMillis)
-    })
-  })
+  val framesHistory: LazyList[Future[(Double, Long)]] = moleculesLog.zipWithIndex.map {
+    case (iter: Future[LeapFrogIteration[Vector3D, CubicFigure]], i) => {
+      iter.map((iteration) => {
+        val kineticEnergy: Double = iteration.particles.counit.map((p) => Math.pow(p.velocity.length, 2) / 2).iterator.sum / numberOfParticles
+        val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum / numberOfParticles
+        val total: Double = kineticEnergy + potential
+        println(f"Frame ${i} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")
+        (total, System.currentTimeMillis)
+      })
+    }
+  }
 
-  val numberOfFrames = 20
+  val numberOfFrames = 25
 
   Await.result(
     for {

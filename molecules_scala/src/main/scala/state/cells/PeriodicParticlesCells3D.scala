@@ -1,5 +1,7 @@
 package state.cells
 
+import java.util.concurrent.ExecutorService
+
 import calculation.limit_conditions.LimitConditions
 import domain.Particle
 import domain.geometry.figures.CubicFigure
@@ -7,6 +9,7 @@ import domain.geometry.vector.Vector3D
 import state.ParticlesState
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -99,8 +102,7 @@ case class PeriodicParticlesCells3D(
               })
             })
           })
-        }
-        } getOrElse {
+        }} getOrElse {
           cell
         }
       }
