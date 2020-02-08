@@ -6,26 +6,31 @@ import calculation.physics.PotentialCalculator
 import domain.Particle
 import domain.geometry.vector._
 import state.{ParticleReducer, ParticlesState, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
-case class LeapFrogIteration[V <: AlgebraicVector[V], F <: GeometricFigure](
-  particles: ParticlesState[V],
-  particlesReducer: ParticleReducer[V],
+case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
+  particles: ParticlesState[V, Future],
+  particlesReducer: ParticleReducer[V, Future],
   potentialCalculator: PotentialCalculator[V],
-  limitConditions: LimitConditions[V, F],
+  limitConditions: LimitConditions[V, Fig],
   deltaStepTime: Double = 0.0001
 ) {
-  def init(): LeapFrogIteration[V, F] = {
-    val newParticles: ParticlesState[V] = particlesReducer.applyChangeAction(particles,
-      UpdateForceAndPotential[V](recomputeForceAndPotential)
-    )
-
-    this.copy[V, F](particles = newParticles)
+  def init(): Future[LeapFrogIteration[V, Fig]] = {
+    for {
+      newParticles <- particlesReducer.applyChangeAction(
+        particles,
+        UpdateForceAndPotential[V](recomputeForceAndPotential)
+      )
+    } yield {
+      this.copy[V, Fig](particles = newParticles)
+    }
   }
 
   private val deltaStepTimeSquared: Double = deltaStepTime * deltaStepTime
-  def iterationStep(): LeapFrogIteration[V, F] = {
-    val newParticles = particlesReducer.applyChangeActions(particles, List(
+  def iterationStep(): Future[LeapFrogIteration[V, Fig]] = {
+    val newParticlesFuture: Future[ParticlesState[V, Future]] = particlesReducer.applyChangeActions(particles, List(
       UpdatePositions((p) => p.position + p.velocity * deltaStepTime + p.acceleration * (deltaStepTimeSquared / 2)),
       UpdatePositions((p) => limitConditions.positionLimitCondition(p.position)),
       UpdateVelocities((p) => p.velocity + p.acceleration * (deltaStepTime / 2)),
@@ -35,7 +40,11 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], F <: GeometricFigure](
       UpdateVelocities((p) => p.velocity + p.acceleration * (deltaStepTime / 2)),
     ));
 
-    this.copy[V, F](particles = newParticles)
+    for {
+      newParticles <- newParticlesFuture
+    } yield {
+      this.copy[V, Fig](particles = newParticles)
+    }
   }
 
   private def recomputeForceAndPotential(particle1: Particle[V], particle2: Particle[V]): (Particle[V], Particle[V]) = {

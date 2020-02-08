@@ -1,12 +1,16 @@
 package state
 
+import cats.{Functor, Monad}
 import domain.Particle
 import domain.geometry.vector.AlgebraicVector
+import scala.concurrent.ExecutionContext.Implicits.global
 import state.{ParticleReducer, ParticlesChangeAction, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
 
-class ParticlesPhysicsReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V] {
+import scala.concurrent.Future
 
-  override def applyChangeAction(state: ParticlesState[V], action: ParticlesChangeAction[V]): ParticlesState[V] = {
+class ParticlesPhysicsReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V, Future] {
+
+  override def applyChangeAction(state: ParticlesState[V, Future], action: ParticlesChangeAction[V]): Future[ParticlesState[V, Future]] = {
     action match {
       case act: ZeroForces[V] => this.applyZeroForcesActionForSeq(state, act)
       case act: ZeroPotentials[V] => this.applyZeroPotentialsActionForSeq(state, act)
@@ -16,57 +20,29 @@ class ParticlesPhysicsReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V
     }
   }
 
-  override def applyChangeActions(particlesContainer: ParticlesState[V], actions: Seq[ParticlesChangeAction[V]]): ParticlesState[V] = {
-    actions.foldLeft(particlesContainer)(applyChangeAction)
+  override def applyChangeActions(state: ParticlesState[V, Future], actions: Seq[ParticlesChangeAction[V]]): Future[ParticlesState[V, Future]] = {
+    // In case of empty list we should get F[State] type, maybe make method to zip State to F[State],
+    // Like unit for container of container
+    actions.foldLeft(state.unit())((stateAcc, act) => stateAcc.flatMap((newState) => applyChangeAction(newState, act)))
   }
 
-  protected def applyZeroForcesActionForSeq(particles: ParticlesState[V], action: ZeroForces[V]): ParticlesState[V] = {
+  protected def applyZeroForcesActionForSeq(particles: ParticlesState[V, Future], action: ZeroForces[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(force = p.force.zero))
   }
 
-  protected def applyZeroPotentialsActionForSeq(particles: ParticlesState[V], action: ZeroPotentials[V]): ParticlesState[V] = {
+  protected def applyZeroPotentialsActionForSeq(particles: ParticlesState[V, Future], action: ZeroPotentials[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(potential = 0.0))
   }
 
-  protected def applyUpdatePositionsActionForSeq(particles: ParticlesState[V], action: UpdatePositions[V]): ParticlesState[V] = {
+  protected def applyUpdatePositionsActionForSeq(particles: ParticlesState[V, Future], action: UpdatePositions[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(position = action.fn(p)))
   }
 
-  protected def applyUpdateVelocitiesActionForSeq(particles: ParticlesState[V], action: UpdateVelocities[V]): ParticlesState[V] = {
+  protected def applyUpdateVelocitiesActionForSeq(particles: ParticlesState[V, Future], action: UpdateVelocities[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(velocity = action.fn(p)))
   }
 
-  protected def applyUpdateForceAndPotentialActionForSeq(particles: ParticlesState[V], action: UpdateForceAndPotential[V]): ParticlesState[V] = {
+  protected def applyUpdateForceAndPotentialActionForSeq(particles: ParticlesState[V, Future], action: UpdateForceAndPotential[V]): Future[ParticlesState[V, Future]] = {
     particles.particlesReduce((p1, p2) => action.fn(p1, p2)._1)
-    //    (for {
-//      (p1, i) <- particles.particlesStream.zipWithIndex
-//      (p2, j) <- particles.particlesStream.zipWithIndex
-//      if i < j
-//    } yield (p1, p2))
-//      .foldLeft(Map[Int, Particle[V]]())((acc: Map[Int, Particle[V]], particlesPair) => {
-//        val (particle1, particle2) = particlesPair
-//        val (newParticle1, newParticle2) = action.fn(particle1, particle2)
-//
-//        val mergeParticle = (acc: Map[Int, Particle[V]], newParticle: Particle[V]) => {
-//          val mergedParticle: Particle[V] = acc
-//            .get(newParticle.id)
-//            .map((p) => p.copy(
-//              force = p.force + newParticle.force,
-//              potential = p.potential + newParticle.potential
-//            ))
-//            .getOrElse(newParticle)
-//
-//          acc + (mergedParticle.id -> mergedParticle)
-//        }
-//
-//        mergeParticle(mergeParticle(acc, newParticle1), newParticle2)
-//      }).values
   }
-}
-
-object ParticlesPhysicsReducer {
-  // In general particles container may use particles positions to sort them oslt
-  // That's why reducer works with Container[VecType, Particle[_]]
-  // As I understand, i generic
-  type ParticlesSeqContainer[V, P[_]] = Seq[P[V]]
 }

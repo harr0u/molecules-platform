@@ -1,13 +1,15 @@
 import java.io.{BufferedWriter, File, FileWriter}
 
-import calculation.geometry.figures.{Cube, CubicFigure}
 import calculation.limit_conditions.BoxLimitConditions
 import domain.Particle
 import domain.geometry.vector._
-import molecules.ParticlesSimpleState
 import calculation.numerical.LeapFrogIteration
 import calculation.physics.LennardJonesPotential
-import state.ParticlesCells3D
+import domain.geometry.figures.{Cube, CubicFigure}
+import state.{ParticlesPhysicsReducer, ParticlesSeqState, PeriodicParticlesCells3D}
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 object Molecules extends App {
@@ -33,32 +35,38 @@ object Molecules extends App {
       )
     }
 
-    new ParticlesCells3D(particles, box)
+    new ParticlesSeqState(particles)
   }
 
-  val makeIteration: () => LeapFrogIteration[Vector3D, CubicFigure] = () => new LeapFrogIteration(
+  val makeIteration: () => Future[LeapFrogIteration[Vector3D, CubicFigure]] = () => new LeapFrogIteration(
     superSmartMolecules(),
-    new LennardJonesPotential[Vector3D](),
+    new ParticlesPhysicsReducer(),
+    new LennardJonesPotential(),
     box,
     deltaStepTime = 0.001
   ).init()
 
 
   val moleculesLog = LazyList.iterate(makeIteration())(
-    iter => iter.iterationStep()
+    iter => iter.flatMap(iteration => iteration.iterationStep())
   )
 
-  val totals = moleculesLog.map((iter: LeapFrogIteration[Vector3D, CubicFigure]) => {
-    val kineticEnergy: Double = iter.particles.particlesStream.map((p) => Math.pow(p.velocity.length, 2) / 2).iterator.sum
-    val potential: Double = iter.particles.particlesStream.map(_.potential).iterator.sum
-    val total: Double = kineticEnergy + potential
+  val framesHistory = moleculesLog.map((iter: Future[LeapFrogIteration[Vector3D, CubicFigure]]) => {
+    iter.map((iteration) => {
+      val kineticEnergy: Double = iteration.particles.counit.map((p) => Math.pow(p.velocity.length, 2) / 2).iterator.sum
+      val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum
+      val total: Double = kineticEnergy + potential
 
-    (total, System.currentTimeMillis)
+      (total, System.currentTimeMillis)
+    })
   })
 
-  val numberOfFrames = 1000
-  val (initTotal, initEpoch) = totals.head
-  val (lastTotal, epoch) = totals(numberOfFrames)
+  val numberOfFrames = 10000
 
-  println(f"Total change = ${lastTotal - initTotal}; FPS = ${numberOfFrames * 1000.0 / (epoch - initEpoch)}")
+  for {
+    (initialTotal, initialEpoch) <- framesHistory(0)
+    (lastTotal, lastEpoch) <- framesHistory(numberOfFrames - 1)
+  } yield {
+    println(f"Total change = ${lastTotal - initialTotal}; FPS = ${numberOfFrames * 1000.0 / (lastEpoch - initialEpoch)}")
+  }
 }
