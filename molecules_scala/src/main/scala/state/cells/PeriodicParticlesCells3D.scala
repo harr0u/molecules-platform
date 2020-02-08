@@ -1,13 +1,14 @@
-package state
+package state.cells
 
-import domain.geometry.figures.CubicFigure
 import calculation.limit_conditions.LimitConditions
 import domain.Particle
+import domain.geometry.figures.CubicFigure
 import domain.geometry.vector.Vector3D
+import state.ParticlesState
 
-import scala.collection.immutable.Queue
-import scala.concurrent.{Await, Future, Promise}
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 case class PeriodicParticlesCells3D(
   limitConditions: LimitConditions[Vector3D, CubicFigure],
@@ -19,23 +20,29 @@ case class PeriodicParticlesCells3D(
   override def unit(): Future[ParticlesState[Vector3D, Future]] = {
     Future.successful(this)
   }
+
   override def counit: LazyList[Particle[Vector3D]] = currentFlatCells.reduce(_ ++ _).to(LazyList)
 
   override def map(fn: Particle[Vector3D] => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
-    val mapFutures: Seq[Future[(Queue[Particle[Vector3D]], Queue[(Particle[Vector3D], Int)])]] = for {
+    val mapFutures: Seq[Future[(Seq[Particle[Vector3D]], Seq[(Int, Particle[Vector3D])])]] = for {
       (cell, i) <- currentFlatCells.zipWithIndex
     } yield {
-      Future[(Queue[Particle[Vector3D]], Queue[(Particle[Vector3D], Int)])] {
-        cell.foldLeft((Queue[Particle[Vector3D]](), Queue[(Particle[Vector3D], Int)]()))((acc, particle) => {
+      Future[(Seq[Particle[Vector3D]], Seq[(Int, Particle[Vector3D])])] {
+        cell.foldLeft((Seq[Particle[Vector3D]](), Seq[(Int, Particle[Vector3D])]()))((acc, particle) => {
           val (rest, left) = acc
 
           val newParticle = fn(particle)
           if (newParticle.position == particle.position) {
             (rest.appended(newParticle), left)
           } else {
-            PeriodicParticlesCells3D.getFlatCellIndexOfParticle(this.cellsMetadata)(newParticle)
-              .map((newIndex) => (rest, left.appended((newParticle, newIndex))))
-              .getOrElse((rest.appended(newParticle), left))
+            (for {
+              newIndex <- PeriodicParticlesCells3D.getFlatCellIndexOfParticle(this.cellsMetadata)(newParticle)
+              if (newIndex) != i
+            } yield {
+              (rest, left.appended((newIndex, newParticle)))
+            }) getOrElse {
+              (rest.appended(newParticle), left)
+            }
           }
         })
       }
@@ -43,11 +50,11 @@ case class PeriodicParticlesCells3D(
 
     Future.sequence(mapFutures).map(computedFlatCells => {
       val restParticlesFromCells: Vector[Seq[Particle[Vector3D]]] = computedFlatCells.map(_._1).toVector
-      val leftParticlesFromCells: Seq[Queue[(Particle[Vector3D], Int)]] = computedFlatCells.map(_._2)
+      val leftParticlesFromCells: Seq[Seq[(Int, Particle[Vector3D])]] = computedFlatCells.map(_._2)
 
       val newParticleCells: Vector[Seq[Particle[Vector3D]]] = leftParticlesFromCells.foldLeft(restParticlesFromCells)((particlesAcc, leftParticlesFromCell) => {
         leftParticlesFromCell.foldLeft(particlesAcc)((particlesAcc1, leftParticleWithIndex) => {
-          val (leftParticle, newCellIndex) = leftParticleWithIndex
+          val (newCellIndex, leftParticle) = leftParticleWithIndex
           particlesAcc1.updated(newCellIndex, particlesAcc1(newCellIndex).appended(leftParticle))
         })
       })
@@ -57,7 +64,7 @@ case class PeriodicParticlesCells3D(
   }
 
   // TODO implement reduce via map to use update particle cell logic
-  override def particlesReduce(fn: (Particle[Vector3D], Particle[Vector3D]) => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
+  override def reduce(fn: (Particle[Vector3D], Particle[Vector3D]) => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
     val reduceFutures: Vector[Future[Seq[Particle[Vector3D]]]] = for ((cell, i) <- currentFlatCells.zipWithIndex) yield {
       Future[Seq[Particle[Vector3D]]] {
         PeriodicParticlesCells3D.flatIndex2Indexes(this.cellsMetadata)(i) map { case (layerIndex, rowIndex, cellIndex) => {
@@ -79,9 +86,9 @@ case class PeriodicParticlesCells3D(
                 getPeriodicAdjIndex(cellIndex, deltaC, this.cellsMetadata.cellsNumber)
               )
             } yield {
-              this.currentFlatCells.applyOrElse[Int, Seq[Particle[Vector3D]]](flatIndex, (_) => List())
+              this.currentFlatCells.applyOrElse[Int, Seq[Particle[Vector3D]]](flatIndex, (_) => Seq())
             }) getOrElse {
-              List()
+              Seq()
             }
           }
 
@@ -92,43 +99,14 @@ case class PeriodicParticlesCells3D(
               })
             })
           })
-        }} getOrElse {
+        }
+        } getOrElse {
           cell
         }
       }
     }
 
     Future.sequence(reduceFutures).map((newFlatCells) => this.copy(currentFlatCells = newFlatCells))
-  }
-
-}
-
-case class ParticlesCellMetadata(
-  layersNumber: Int,
-  rowsNumber: Int,
-  cellsNumber: Int,
-  cellHeight: Double,
-  cellLength: Double,
-  cellWidth: Double
-)
-
-object ParticlesCellMetadata {
-  def fromCubicFigure(fig: CubicFigure, minimumCellLength: Double = 5.0): ParticlesCellMetadata = {
-    val findNumberOfCellsInDirection = (directionLength: Double) => {
-      Math.max(Math.floor(directionLength / minimumCellLength), 1).toInt
-    }
-    val layersNumber: Int = findNumberOfCellsInDirection(fig.height)
-    val rowsNumber: Int = findNumberOfCellsInDirection(fig.length)
-    val cellsNumber: Int = findNumberOfCellsInDirection(fig.width)
-
-    ParticlesCellMetadata(
-      layersNumber,
-      rowsNumber,
-      cellsNumber,
-      fig.height / layersNumber,
-      fig.length / rowsNumber,
-      fig.width / cellsNumber,
-    )
   }
 }
 

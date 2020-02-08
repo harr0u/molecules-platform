@@ -19,10 +19,11 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
 ) {
   def init(): Future[LeapFrogIteration[V, Fig]] = {
     for {
-      newParticles <- particlesReducer.applyChangeAction(
-        particles,
+      newParticles <- particlesReducer.applyChangeActions(particles, List(
+        ZeroForces(),
+        ZeroPotentials(),
         UpdateForceAndPotential[V](recomputeForceAndPotential)
-      )
+      ))
     } yield {
       this.copy[V, Fig](particles = newParticles)
     }

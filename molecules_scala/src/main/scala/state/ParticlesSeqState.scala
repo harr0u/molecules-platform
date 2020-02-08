@@ -23,16 +23,15 @@ case class ParticlesSeqState[V <: AlgebraicVector[V]](
     Future.successful(ParticlesSeqState[V](particles.map(fn)))
   }
 
-  override def particlesReduce(fn: (Particle[V], Particle[V]) => Particle[V]): Future[ParticlesState[V, Future]] = {
-    Future.successful(ParticlesSeqState[V](particles.zipWithIndex.map {
-      case (particle, i) => {
+  override def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): Future[ParticlesState[V, Future]] = {
+    Future.sequence(particles.zipWithIndex.map {
+      case (particle, i) => Future {
         particles.zipWithIndex.foldLeft(particle)((accParticle, pi) => {
           val (secondParticle, j) = pi
 
           if (i != j) fn(accParticle, secondParticle) else accParticle
         })
       }
-    })
-    )
+    }).map((newParticles) => this.copy(particles = newParticles))
   }
 }

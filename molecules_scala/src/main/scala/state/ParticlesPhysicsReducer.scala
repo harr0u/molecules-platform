@@ -43,6 +43,6 @@ class ParticlesPhysicsReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V
   }
 
   protected def applyUpdateForceAndPotentialActionForSeq(particles: ParticlesState[V, Future], action: UpdateForceAndPotential[V]): Future[ParticlesState[V, Future]] = {
-    particles.particlesReduce((p1, p2) => action.fn(p1, p2)._1)
+    particles.reduce((p1, p2) => action.fn(p1, p2)._1)
   }
 }

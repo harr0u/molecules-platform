@@ -21,7 +21,7 @@ trait ParticlesState[V <: AlgebraicVector[V], F[_]] {
     def counit: LazyList[Particle[V]]
 
     // Result particle should be (updated first particle) <--with<-- (second particle) - !!dumb
-    def particlesReduce(fn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]]
+    def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]]
     // def map2(f: (Particle[V], Particle[V]) => (Particle[V], Particle[V])
     // TODO? abstract method ~map~ oslt to give reducer access to inner particles
 }
