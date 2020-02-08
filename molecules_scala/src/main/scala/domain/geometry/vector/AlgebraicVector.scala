@@ -1,4 +1,4 @@
-package domain.vector
+package domain.geometry.vector
 
 abstract class AlgebraicVector[VectorType <: AlgebraicVector[VectorType]] {
   def length: Double

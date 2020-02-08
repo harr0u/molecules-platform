@@ -1,6 +1,6 @@
 import org.scalatest._
 import domain.Particle
-import domain.vector._
+import domain.geometry.vector._
 
 class Vector2DSpec extends FlatSpec with Matchers {
 
