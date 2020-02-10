@@ -15,5 +15,5 @@ abstract class AlgebraicVector[VectorType <: AlgebraicVector[VectorType]] {
 
   def mapCoordinates(mapFn: Double => Double): VectorType
 
-  def zero: VectorType 
+  def zero: VectorType
 }

@@ -12,11 +12,11 @@ class ParticlesPhysicsReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V
 
   override def applyChangeAction(state: ParticlesState[V, Future], action: ParticlesChangeAction[V]): Future[ParticlesState[V, Future]] = {
     action match {
-      case act: ZeroForces[V] => this.applyZeroForcesActionForSeq(state, act)
-      case act: ZeroPotentials[V] => this.applyZeroPotentialsActionForSeq(state, act)
-      case act: UpdatePositions[V] => this.applyUpdatePositionsActionForSeq(state, act)
-      case act: UpdateVelocities[V] => this.applyUpdateVelocitiesActionForSeq(state, act)
-      case act: UpdateForceAndPotential[V] => this.applyUpdateForceAndPotentialActionForSeq(state, act)
+      case act: ZeroForces[V] => this.applyZeroForcesAction(state, act)
+      case act: ZeroPotentials[V] => this.applyZeroPotentialsAction(state, act)
+      case act: UpdatePositions[V] => this.applyUpdatePositionsAction(state, act)
+      case act: UpdateVelocities[V] => this.applyUpdateVelocitiesAction(state, act)
+      case act: UpdateForceAndPotential[V] => this.applyUpdateForceAndPotentialAction(state, act)
     }
   }
 
@@ -26,23 +26,23 @@ class ParticlesPhysicsReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V
     actions.foldLeft(state.unit())((stateAcc, act) => stateAcc.flatMap((newState) => applyChangeAction(newState, act)))
   }
 
-  protected def applyZeroForcesActionForSeq(particles: ParticlesState[V, Future], action: ZeroForces[V]): Future[ParticlesState[V, Future]] = {
+  protected def applyZeroForcesAction(particles: ParticlesState[V, Future], action: ZeroForces[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(force = p.force.zero))
   }
 
-  protected def applyZeroPotentialsActionForSeq(particles: ParticlesState[V, Future], action: ZeroPotentials[V]): Future[ParticlesState[V, Future]] = {
+  protected def applyZeroPotentialsAction(particles: ParticlesState[V, Future], action: ZeroPotentials[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(potential = 0.0))
   }
 
-  protected def applyUpdatePositionsActionForSeq(particles: ParticlesState[V, Future], action: UpdatePositions[V]): Future[ParticlesState[V, Future]] = {
+  protected def applyUpdatePositionsAction(particles: ParticlesState[V, Future], action: UpdatePositions[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(position = action.fn(p)))
   }
 
-  protected def applyUpdateVelocitiesActionForSeq(particles: ParticlesState[V, Future], action: UpdateVelocities[V]): Future[ParticlesState[V, Future]] = {
+  protected def applyUpdateVelocitiesAction(particles: ParticlesState[V, Future], action: UpdateVelocities[V]): Future[ParticlesState[V, Future]] = {
     particles.map((p) => p.copy(velocity = action.fn(p)))
   }
 
-  protected def applyUpdateForceAndPotentialActionForSeq(particles: ParticlesState[V, Future], action: UpdateForceAndPotential[V]): Future[ParticlesState[V, Future]] = {
-    particles.particlesReduce((p1, p2) => action.fn(p1, p2)._1)
+  protected def applyUpdateForceAndPotentialAction(particles: ParticlesState[V, Future], action: UpdateForceAndPotential[V]): Future[ParticlesState[V, Future]] = {
+    particles.reduce((p1, p2) => action.fn(p1, p2)._1)
   }
 }

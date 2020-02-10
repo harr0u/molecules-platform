@@ -7,7 +7,7 @@ import sys
 
 
 if __name__ == "__main__" and "simple" not in sys.argv:
-    filename = f'/Users/marka/Documents/molecules/molecules_cpp/data_detailed.csv'
+    filename = '/Users/marka/Documents/projects/molecules-platform/molecules_cpp/data_detailed.csv'
     frames_per_iteration = 30
 
     with open(filename, 'r') as file:
@@ -71,7 +71,7 @@ if __name__ == "__main__" and "simple" not in sys.argv:
 
 if __name__ == '__main__' and 'simple' in sys.argv:
     logger = PlotLogger()
-    filename = f'/Users/marka/Documents/molecules/molecules_cpp/data.csv'
+    filename = '/Users/marka/Documents/projects/molecules-platform/molecules_cpp/data.csv'
     with open(filename, 'r') as f:
         data = list([s.strip().split() for s in f.readlines()])
 

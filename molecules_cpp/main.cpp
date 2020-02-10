@@ -97,13 +97,13 @@ void log_values(const ParticlesCells& cells, int id, bool detailed) {
     log_values(particles, id, detailed);
 }
 
-const int PARTICLES_SIDE_COUNT = 100;
+const int PARTICLES_SIDE_COUNT = 125;
 const int PARTICLES_COUNT = PARTICLES_SIDE_COUNT * PARTICLES_SIDE_COUNT;
 const long double DENSITY = 0.7;
 const long double RADIUS_CUT_OFF = 5;
-const long double VELOCITY_MUL = 0.8;
+const long double VELOCITY_MUL = 1.5;
 const long double DELTA_TIME = 0.001;
-const bool DETAILED_LOG = true;
+const bool DETAILED_LOG = false;
 
 int main1() {
     Calculator calculator(PARTICLES_COUNT, DENSITY, DELTA_TIME);

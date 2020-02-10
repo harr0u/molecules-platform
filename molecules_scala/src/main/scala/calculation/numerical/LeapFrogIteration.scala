@@ -19,10 +19,11 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
 ) {
   def init(): Future[LeapFrogIteration[V, Fig]] = {
     for {
-      newParticles <- particlesReducer.applyChangeAction(
-        particles,
+      newParticles <- particlesReducer.applyChangeActions(particles, List(
+        ZeroForces(),
+        ZeroPotentials(),
         UpdateForceAndPotential[V](recomputeForceAndPotential)
-      )
+      ))
     } yield {
       this.copy[V, Fig](particles = newParticles)
     }
@@ -51,7 +52,6 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
     val (force, potential: Double) = potentialCalculator.computeForceAndPotential(
       limitConditions.distanceLimitCondition(particle2.position - particle1.position)
     )
-
     val updatedParticle1 = particle1.copy(force = particle1.force + force, potential = particle1.potential + potential)
     val updatedParticle2 = particle2.copy(force = particle2.force - force, potential = particle2.potential + potential)
 
