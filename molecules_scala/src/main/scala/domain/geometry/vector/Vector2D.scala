@@ -6,7 +6,7 @@ import scala.math.sqrt
 
 
 case class Vector2D(x: Double = 0.0, y: Double = 0.0) extends AlgebraicVector[Vector2D] {
-  def length: Double = sqrt(x * x + y * y)
+  def squaredLength: Double = x*x + y*y
 
   def scale(factor: Double): Vector2D = Vector2D(x * factor, y * factor)
 
@@ -25,12 +25,12 @@ case class Vector2D(x: Double = 0.0, y: Double = 0.0) extends AlgebraicVector[Ve
   def zero: Vector2D = Vector2D()
 
   def mapCoordinates(mapFn: Double => Double): Vector2D = {
-    Vector2D(mapFn(x), mapFn(y))
+    mapiCoordinates((i, coord) => mapFn(coord))
   }
 
-//  override def toString: String = {
-//    s"($x, $y)"
-//  }
+  def mapiCoordinates(mapFn: (Int, Double) => Double): Vector2D = {
+    Vector2D(mapFn(0, x), mapFn(1, y))
+  }
 }
 
 //object LL {
@@ -48,8 +48,8 @@ case class Vector2D(x: Double = 0.0, y: Double = 0.0) extends AlgebraicVector[Ve
 object Vector2D {
   val empty: Vector2D = new Vector2D()
 
-//  def main(args: Array[String]): Unit = {
-//    val a = 2;
-//    val b = a + 2;
-//  }
+  //  def main(args: Array[String]): Unit = {
+  //    val a = 2;
+  //    val b = a + 2;
+  //  }
 }

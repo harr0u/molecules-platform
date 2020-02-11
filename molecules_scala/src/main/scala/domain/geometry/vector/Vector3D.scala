@@ -6,7 +6,7 @@ import scala.math.sqrt
 
 
 case class Vector3D(x: Double = 0.0, y: Double = 0.0, z: Double = 0.0) extends AlgebraicVector[Vector3D] {
-  def length: Double = sqrt(x*x + y*y + z*z)
+  def squaredLength: Double = x*x + y*y + z*z
 
   def scale(factor: Double): Vector3D = Vector3D(x * factor, y * factor, z * factor)
   def *(factor: Double): Vector3D = scale(factor)
@@ -21,11 +21,11 @@ case class Vector3D(x: Double = 0.0, y: Double = 0.0, z: Double = 0.0) extends A
   def zero: Vector3D = Vector3D()
 
   def mapCoordinates(mapFn: Double => Double): Vector3D = {
-    Vector3D(mapFn(x), mapFn(y), mapFn(z))
+    mapiCoordinates((_, coord) => mapFn(coord))
   }
 
-  override def toString: String = {
-    s"($x, $y, $z)"
+  def mapiCoordinates(mapFn: (Int, Double) => Double): Vector3D = {
+    Vector3D(mapFn(0, x), mapFn(1, y), mapFn(2, z))
   }
 }
 

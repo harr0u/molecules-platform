@@ -4,10 +4,10 @@ import calculation.limit_conditions.{BoxLimitConditions, LimitConditions, Rectan
 import domain.Particle
 import domain.geometry.vector._
 import calculation.numerical.LeapFrogIteration
-import calculation.physics.{LennardJonesCutOffPotential, LennardJonesPotential}
+import calculation.physics.{CenterOfMassCalculator, LennardJonesCutOffPotential, LennardJonesPotential}
 import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import state.cells.{PeriodicFutureParticlesCells2D, PeriodicFutureParticlesCells3D}
-import state.{ParticlesPhysicsReducer, ParticlesSeqState, ParticlesState}
+import state.{ParticlesSeqState, ParticlesState, ParticlesStateReducer}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,26 +16,26 @@ import scala.util.Random
 
 
 object Molecules extends App {
-  val boxWidth: Double = 150.0
+  val boxWidth: Double = 60.0
+  val numberOfFrames = 2500
 
-  val (numberOfParticles, moleculesLog) = build2DLog(boxWidth, 125, 1.5, true)
-  println(numberOfParticles)
+  val (numberOfParticles, moleculesLog) = build2DLog(boxWidth, 50, 1.5, true)
+
 
   val framesHistory: LazyList[Future[(Double, Long)]] = moleculesLog.zipWithIndex.map {
     case (iter, i) => iter.map((iteration) => {
-      val kineticEnergy: Double = iteration.particles.counit.map((p) => Math.pow(p.velocity.length, 2) / 2).iterator.sum / numberOfParticles
+      val kineticEnergy: Double = iteration.particles.counit.map((p) => p.velocity.squaredLength / 2).iterator.sum / numberOfParticles
       val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum / numberOfParticles
       val total: Double = kineticEnergy + potential
 
-      if (i % 100 == 0) {
-        println(f"Frame ${i} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")
+      if (i % 25 == 0) {
+        println(f"Frame ${i} - T[${total}] - P[${potential}] - K[${kineticEnergy}] - FPS")
       }
 
       (total, System.currentTimeMillis)
     })
   }
 
-  val numberOfFrames = 500
 
   Await.result(
     for {
@@ -112,7 +112,7 @@ object Molecules extends App {
 
     val makeIteration: () => Future[LeapFrogIteration[V, Fig]] = () => new LeapFrogIteration(
       particles,
-      new ParticlesPhysicsReducer(),
+      new ParticlesStateReducer(),
       new LennardJonesCutOffPotential(cutOffRadius = 5.0),
       box,
       deltaStepTime = 0.001

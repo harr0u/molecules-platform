@@ -6,8 +6,7 @@ import domain.geometry.figures.RectangleFigure
 import domain.geometry.vector.Vector2D
 import state.ParticlesState
 import state.cells.ParticlesCellsMetadata.Tuple2Same
-import state.cells.PeriodicFutureParticlesCells2D.Cell
-import state.cells.PeriodicFutureParticlesCells2D.Cells
+import state.cells.PeriodicParticleCells.{Cells, Cell}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,7 +15,7 @@ import scala.concurrent.Future
 case class PeriodicFutureParticlesCells2D(
   limitConditions: LimitConditions[Vector2D, RectangleFigure],
   cellsMetadata: ParticlesCells2DMetadata,
-  private val currentFlatCells: Vector[Seq[Particle[Vector2D]]],
+  private val currentFlatCells: Cells[Vector2D],
   minimumCellLength: Double = 5.0
 ) extends PeriodicParticleCells[Vector2D, Future, Tuple2Same](cellsMetadata) {
 
@@ -30,19 +29,19 @@ case class PeriodicFutureParticlesCells2D(
     val mapFutures: Seq[Future[(Seq[Particle[Vector2D]], Seq[(Int, Particle[Vector2D])])]] = for {
       (cell, index) <- currentFlatCells.zipWithIndex
     } yield {
-      Future[(Cell, Seq[(Int, Particle[Vector2D])])] {
+      Future[(Cell[Vector2D], Seq[(Int, Particle[Vector2D])])] {
         super.mapCellWithIndex(cell, index, mapFn)
       }
     }
 
     for (computedRawFlatCells <- Future.sequence(mapFutures)) yield {
-      this.copy(currentFlatCells = sewMappedCells(computedRawFlatCells))
+      this.copy(currentFlatCells = sewMappedCellsIntoFlatCells(computedRawFlatCells))
     }
   }
 
   override def reduce(reduceFn: (Particle[Vector2D], Particle[Vector2D]) => Particle[Vector2D]): Future[ParticlesState[Vector2D, Future]] = {
-    val reduceFutures: Vector[Future[Seq[Particle[Vector2D]]]] = for ((cell, index) <- currentFlatCells.zipWithIndex) yield {
-      Future[Cell] {
+    val reduceFutures: Seq[Future[Cell[Vector2D]]] = for ((cell, index) <- currentFlatCells.zipWithIndex) yield {
+      Future[Cell[Vector2D]] {
         super.reduceCellWithIndex(cell, index, reduceFn)
       }
     }
@@ -50,7 +49,7 @@ case class PeriodicFutureParticlesCells2D(
     Future.sequence(reduceFutures).map((newFlatCells) => this.copy(currentFlatCells = newFlatCells))
   }
 
-  def getAdjacentCells(flatIndex: Int): Seq[Cell] = {
+  def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector2D]] = {
     (for {
       (rowIndex, cellIndex) <- cellsMetadata.flatIndex2Indexes(flatIndex)
     } yield {
@@ -69,7 +68,7 @@ case class PeriodicFutureParticlesCells2D(
             getPeriodicAdjIndex(cellIndex, deltaC, cellsNumber)
           )
         } yield {
-          this.currentFlatCells.applyOrElse[Int, Seq[Particle[Vector2D]]](flatIndex, (_) => Seq())
+          this.currentFlatCells.applyOrElse[Int, Cell[Vector2D]](flatIndex, (_) => Seq())
         }) getOrElse {
           Seq()
         }
@@ -85,27 +84,24 @@ case class PeriodicFutureParticlesCells2D(
 }
 
 object PeriodicFutureParticlesCells2D {
-  type Cell = Seq[Particle[Vector2D]] // Maybe mutable?
-  type Cells = Vector[Cell];
-
   def create(particles: Seq[Particle[Vector2D]], limitConditions: LimitConditions[Vector2D, RectangleFigure], minimumCellLength: Double = 5.0): PeriodicFutureParticlesCells2D = {
     val cellsMetadata = ParticlesCellMetadata.fromRectangleFigure(limitConditions.boundaries)
 
     PeriodicFutureParticlesCells2D(limitConditions, cellsMetadata, makeFlatCells(cellsMetadata, particles), minimumCellLength)
   }
 
-  def makeEmptyFlatCells(cellsMetadata: ParticlesCells2DMetadata): Cells = {
+  def makeEmptyFlatCells(cellsMetadata: ParticlesCells2DMetadata): Cells[Vector2D] = {
     val (rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber
 
     (for {
       _ <- (1 to rowsNumber)
       _ <- (1 to cellsNumber)
-    } yield Seq[Particle[Vector2D]]()).toVector;
+    } yield Cell[Vector2D]()).toVector;
   }
 
-  def makeFlatCells(cellsMetadata: ParticlesCells2DMetadata, particles: Seq[Particle[Vector2D]]): Cells = {
+  def makeFlatCells(cellsMetadata: ParticlesCells2DMetadata, particles: Seq[Particle[Vector2D]]): Cells[Vector2D] = {
     particles.foldLeft(makeEmptyFlatCells(cellsMetadata))(
-      (accCells: Vector[Seq[Particle[Vector2D]]], particle: Particle[Vector2D]) => {
+      (accCells: Cells[Vector2D], particle: Particle[Vector2D]) => {
         (for {
           i <- cellsMetadata.getFlatCellIndexByCoordinate((particle.position.x, particle.position.y))
         } yield (

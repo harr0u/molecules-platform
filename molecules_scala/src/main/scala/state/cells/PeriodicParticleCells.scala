@@ -3,19 +3,19 @@ package state.cells
 import domain.Particle
 import domain.geometry.vector.{AlgebraicVector, Vector3D}
 import state.ParticlesState
-import state.cells.PeriodicFutureParticlesCells3D.{Cell, Cells}
+import state.cells.PeriodicParticleCells.{Cell, Cells}
 
 import scala.collection.immutable.Seq
 
 abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
-  cellsMetadata: ParticlesCellsMetadata[Tuple],
-) extends ParticlesState[V, F] {
+                                                                               cellsMetadata: ParticlesCellsMetadata[Tuple],
+                                                                             ) extends ParticlesState[V, F] {
 
-  def getAdjacentCells(flatIndex: Int): Seq[Seq[Particle[V]]]
+  def getAdjacentCells(flatIndex: Int): Seq[Cell[V]]
   def getFlatCellIndexOfParticle(particle: Particle[V]): Option[Int]
 
-  protected def mapCellWithIndex(cell: Seq[Particle[V]], index: Int, mapFn: (Particle[V]) => Particle[V]): (Seq[Particle[V]], Seq[(Int, Particle[V])]) = {
-    cell.foldLeft((Seq[Particle[V]](), Seq[(Int, Particle[V])]()))((acc, particle) => {
+  protected def mapCellWithIndex(cell: Cell[V], index: Int, mapFn: (Particle[V]) => Particle[V]): (Cell[V], Seq[(Int, Particle[V])]) = {
+    cell.foldLeft((Cell[V](), Seq[(Int, Particle[V])]()))((acc, particle) => {
       val (rest, left) = acc
 
       val newParticle = mapFn(particle)
@@ -35,22 +35,22 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
   }
 
 
-  protected def sewMappedCells(computedFlatCells: Seq[(Seq[Particle[V]], Seq[(Int, Particle[V])])]): Vector[Seq[Particle[V]]]  = {
-    val restParticlesFromCells: Vector[Seq[Particle[V]]] = computedFlatCells.map(_._1).toVector
+  protected def sewMappedCellsIntoFlatCells(computedFlatCells: Seq[(Cell[V], Seq[(Int, Particle[V])])]): Cells[V]  = {
+    val currentCellsWithoutLeftParticles : Cells[V] = computedFlatCells.map(_._1).toVector
     val particlesFromCellsThatLeft: Seq[Seq[(Int, Particle[V])]] = computedFlatCells.map(_._2)
 
-    val newParticleCells: Vector[Seq[Particle[V]]] = particlesFromCellsThatLeft.foldLeft(restParticlesFromCells)((particlesAcc, leftParticlesFromCell) => {
-      leftParticlesFromCell.foldLeft(particlesAcc)((particlesAcc1, leftParticleWithIndex) => {
-        val (newCellIndex, leftParticle) = leftParticleWithIndex
-        particlesAcc1.updated(newCellIndex, particlesAcc1(newCellIndex).appended(leftParticle))
-      })
-    })
-
-    newParticleCells
+    particlesFromCellsThatLeft.foldLeft(currentCellsWithoutLeftParticles)(
+      (particlesAcc, leftParticlesFromCell) => {
+        leftParticlesFromCell.foldLeft(particlesAcc)((particlesAcc1, leftParticleWithIndex) => {
+          val (newCellIndex, leftParticle) = leftParticleWithIndex
+          particlesAcc1.updated(newCellIndex, particlesAcc1(newCellIndex).appended(leftParticle))
+        })
+      }
+    )
   }
 
-  protected def reduceCellWithIndex(cell: Seq[Particle[V]], index: Int, reduceFn: (Particle[V], Particle[V]) => (Particle[V])): Seq[Particle[V]] = {
-    val cellsInvolvedInComputation: Seq[Seq[Particle[V]]] = getAdjacentCells(index)
+  protected def reduceCellWithIndex(cell: Cell[V], index: Int, reduceFn: (Particle[V], Particle[V]) => (Particle[V])): Cell[V] = {
+    val cellsInvolvedInComputation: Seq[Cell[V]] = getAdjacentCells(index)
 
     for ((particle) <- cell) yield {
       cellsInvolvedInComputation.foldLeft(particle)((accParticle, cell) => {
@@ -60,4 +60,17 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
       })
     }
   }
+
+  protected def getPeriodicAdjIndex(index: Int, delta: Int, number: Int): Int = {
+    val index_ = (index + delta) % number
+    if (index_ < 0) number + index_ else index_
+  }
+}
+
+object PeriodicParticleCells {
+  type Cell[V <: AlgebraicVector[V]] = Seq[Particle[V]]
+  def Cell[V <: AlgebraicVector[V]](): Cell[V] = Seq[Particle[V]]()
+
+  type Cells[V <: AlgebraicVector[V]] = Seq[Cell[V]]
+  def Cells[V <: AlgebraicVector[V]](): Cells[V] = Seq[Cell[V]]()
 }

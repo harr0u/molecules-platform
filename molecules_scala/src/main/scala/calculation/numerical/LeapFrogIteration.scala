@@ -2,10 +2,11 @@ package calculation.numerical
 
 import domain.geometry.figures.GeometricFigure
 import calculation.limit_conditions.LimitConditions
-import calculation.physics.PotentialCalculator
+import calculation.physics.{CenterOfMassCalculator, PotentialCalculator}
 import domain.Particle
 import domain.geometry.vector._
-import state.{ParticleReducer, ParticlesState, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
+import state.{ParticleActionMap, ParticleReducer, ParticlesChangeAction, ParticlesState, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -18,8 +19,19 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
   deltaStepTime: Double = 0.0001
 ) {
   def init(): Future[LeapFrogIteration[V, Fig]] = {
+    val centerOfMassAction: ParticleActionMap[V] = new ParticleActionMap[V](
+      (for {
+        cmVelocity <- CenterOfMassCalculator.findCenterMassVelocity(particles)
+      } yield {
+        (p: Particle[V]) => p.copy(velocity = p.velocity - cmVelocity)
+      }).getOrElse(
+        (p: Particle[V]) => p
+      )
+    )
+
     for {
       newParticles <- particlesReducer.applyChangeActions(particles, List(
+        centerOfMassAction,
         ZeroForces(),
         ZeroPotentials(),
         UpdateForceAndPotential[V](recomputeForceAndPotential)
@@ -48,13 +60,9 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
     }
   }
 
-  private def recomputeForceAndPotential(particle1: Particle[V], particle2: Particle[V]): (Particle[V], Particle[V]) = {
-    val (force, potential: Double) = potentialCalculator.computeForceAndPotential(
+  private def recomputeForceAndPotential(particle1: Particle[V], particle2: Particle[V]): (V, Double) = {
+    potentialCalculator.computeForceAndPotential(
       limitConditions.distanceLimitCondition(particle2.position - particle1.position)
     )
-    val updatedParticle1 = particle1.copy(force = particle1.force + force, potential = particle1.potential + potential)
-    val updatedParticle2 = particle2.copy(force = particle2.force - force, potential = particle2.potential + potential)
-
-    (updatedParticle1, updatedParticle2)
   }
 }
