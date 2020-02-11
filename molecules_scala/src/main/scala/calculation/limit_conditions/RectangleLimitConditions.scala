@@ -6,9 +6,9 @@ import domain.geometry.vector.Vector2D
 class RectangleLimitConditions(override val boundaries: RectangleFigure) extends LimitConditions[Vector2D, RectangleFigure] {
 
   override def positionLimitCondition(position: Vector2D): Vector2D = {
-    val coordinateLimit = (coordinate: Double, length: Double) => {
-      val coordinate_ = coordinate % length // -2 % 5 == -2
-      if (coordinate_ < 0) length + coordinate_ else coordinate_ // -2 -> 3
+    val coordinateLimit = (_coordinate: Double, length: Double) => {
+      val coordinate = _coordinate % length // -2 % 5 == -2
+      if (coordinate < 0) length + coordinate else coordinate // -2 -> 3
     }
 
     this.applyLimitConditions(position, coordinateLimit)
