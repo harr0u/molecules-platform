@@ -16,7 +16,7 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
   particlesReducer: ParticleReducer[V, Future],
   potentialCalculator: PotentialCalculator[V],
   limitConditions: LimitConditions[V, Fig],
-  deltaStepTime: Double = 0.0001
+  `∆t`: Double = 0.0001
 ) {
   def init(): Future[LeapFrogIteration[V, Fig]] = {
     val centerOfMassAction: ParticleActionMap[V] = new ParticleActionMap[V](
@@ -41,16 +41,16 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
     }
   }
 
-  private val deltaStepTimeSquared: Double = deltaStepTime * deltaStepTime
+  private val deltaStepTimeSquared: Double = `∆t` * `∆t`
   def iterationStep(): Future[LeapFrogIteration[V, Fig]] = {
     val newParticlesFuture: Future[ParticlesState[V, Future]] = particlesReducer.applyChangeActions(particles, List(
-      UpdatePositions((p) => p.position + p.velocity * deltaStepTime + p.acceleration * (deltaStepTimeSquared / 2)),
+      UpdatePositions((p) => p.position + p.velocity * `∆t` + p.acceleration * (deltaStepTimeSquared / 2)),
       UpdatePositions((p) => limitConditions.positionLimitCondition(p.position)),
-      UpdateVelocities((p) => p.velocity + p.acceleration * (deltaStepTime / 2)),
+      UpdateVelocities((p) => p.velocity + p.acceleration * (`∆t` / 2)),
       ZeroForces(),
       ZeroPotentials(),
       UpdateForceAndPotential(recomputeForceAndPotential),
-      UpdateVelocities((p) => p.velocity + p.acceleration * (deltaStepTime / 2)),
+      UpdateVelocities((p) => p.velocity + p.acceleration * (`∆t` / 2)),
     ));
 
     for {
