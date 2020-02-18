@@ -3,20 +3,12 @@ import domain.Particle
 import domain.geometry.vector._
 
 class ParticleSpec extends FlatSpec with Matchers {
-//  "A Particle" should "change its position after translating" in {
-//    val particle = new Particle(0, Vector3D(1, 2, 3), Vector3D.empty, Vector3D.empty, 0.0,1.0)
-//
-//    particle.position = particle.position + Vector3D(10, 10, 10)
-//
-//    assert(particle.position.x == 11)
-//    assert(particle.position.y == 12)
-//    assert(particle.position.z == 13)
-//  }
-//
-//  it should "store unique immutable id" in {
-//    val p1 = new Particle(Vector3D.empty, Vector3D.empty)
-//    val p2 = new Particle(Vector3D.empty, Vector3D.empty)
-//
-//    assert(p1.id != p2.id)
-//  }
+  "A Particle" should "contain acceleration which depends on Force (F = ma)" in {
+    val force: Vector3D = Vector3D(100, 200, 300)
+    val mass: Double = 100.0
+
+    val particle = new Particle(0, Vector3D.empty, Vector3D.empty, force, 0.0, mass)
+
+    assert(particle.acceleration == Vector3D(1, 2, 3))
+  }
 }
