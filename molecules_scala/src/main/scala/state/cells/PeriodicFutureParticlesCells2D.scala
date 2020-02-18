@@ -1,6 +1,6 @@
 package state.cells
 
-import calculation.limit_conditions.LimitConditions
+import calculation.limitConditions.SpaceConditions
 import domain.Particle
 import domain.geometry.figures.RectangleFigure
 import domain.geometry.vector.Vector2D
@@ -13,10 +13,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 case class PeriodicFutureParticlesCells2D(
-  limitConditions: LimitConditions[Vector2D, RectangleFigure],
-  cellsMetadata: ParticlesCells2DMetadata,
-  private val currentFlatCells: Cells[Vector2D],
-  minimumCellLength: Double = 5.0
+                                           limitConditions: SpaceConditions[Vector2D, RectangleFigure],
+                                           cellsMetadata: ParticlesCells2DMetadata,
+                                           private val currentFlatCells: Cells[Vector2D],
+                                           minimumCellLength: Double = 5.0
 ) extends PeriodicParticleCells[Vector2D, Future, Tuple2Same](cellsMetadata) {
 
   override def unit(): Future[ParticlesState[Vector2D, Future]] = {
@@ -84,7 +84,7 @@ case class PeriodicFutureParticlesCells2D(
 }
 
 object PeriodicFutureParticlesCells2D {
-  def create(particles: Seq[Particle[Vector2D]], limitConditions: LimitConditions[Vector2D, RectangleFigure], minimumCellLength: Double = 5.0): PeriodicFutureParticlesCells2D = {
+  def create(particles: Seq[Particle[Vector2D]], limitConditions: SpaceConditions[Vector2D, RectangleFigure], minimumCellLength: Double = 5.0): PeriodicFutureParticlesCells2D = {
     val cellsMetadata = ParticlesCellMetadata.fromRectangleFigure(limitConditions.boundaries)
 
     PeriodicFutureParticlesCells2D(limitConditions, cellsMetadata, makeFlatCells(cellsMetadata, particles), minimumCellLength)

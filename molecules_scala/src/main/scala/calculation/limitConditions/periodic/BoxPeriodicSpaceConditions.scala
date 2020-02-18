@@ -1,20 +1,21 @@
-package calculation.limit_conditions
+package calculation.limitConditions.periodic
 
+import calculation.limitConditions.SpaceConditions
 import domain.geometry.figures.{Box, Cube, CubicFigure}
 import domain.geometry.vector.Vector3D
 
-class BoxLimitConditions(override val boundaries: CubicFigure) extends LimitConditions[Vector3D, CubicFigure] {
+class BoxPeriodicSpaceConditions(override val boundaries: CubicFigure) extends SpaceConditions[Vector3D, CubicFigure] {
 
   override def positionLimitCondition(position: Vector3D): Vector3D = {
-    val coordinateLimit = (coordinate: Double, length: Double) => {
-      val coordinate_ = coordinate % length // -2 % 5 == -2
-      if (coordinate_ < 0) length + coordinate_ else coordinate_ // -2 -> 3
+    val coordinateLimit = (_coordinate: Double, length: Double) => {
+      val coordinate = _coordinate % length // -2 % 5 == -2
+      if (coordinate < 0) length + coordinate else coordinate // -2 -> 3
     }
 
     this.applyLimitConditions(position, coordinateLimit)
   }
 
-  override def distanceLimitCondition(distance: Vector3D): Vector3D = {
+  override def getDistanceBetween(point: Vector3D, other: Vector3D): Vector3D = {
     val coordinateLimit = (coordinate: Double, length: Double) => {
       if (Math.abs(coordinate) > (length / 2)) {
         -1 * coordinate.sign * (length - Math.abs(coordinate))
@@ -23,7 +24,7 @@ class BoxLimitConditions(override val boundaries: CubicFigure) extends LimitCond
       }
     }
 
-    this.applyLimitConditions(distance, coordinateLimit)
+    this.applyLimitConditions(other - point, coordinateLimit)
   }
 
   private def applyLimitConditions(vector: Vector3D, coordinateTransformer: (Double, Double) => Double): Vector3D = {

@@ -1,7 +1,7 @@
 package calculation.numerical
 
 import domain.geometry.figures.GeometricFigure
-import calculation.limit_conditions.LimitConditions
+import calculation.limitConditions.SpaceConditions
 import calculation.physics.{CenterOfMassCalculator, PotentialCalculator}
 import domain.Particle
 import domain.geometry.vector._
@@ -12,11 +12,11 @@ import scala.concurrent.Future
 
 
 case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
-  particles: ParticlesState[V, Future],
-  particlesReducer: ParticleReducer[V, Future],
-  potentialCalculator: PotentialCalculator[V],
-  limitConditions: LimitConditions[V, Fig],
-  `∆t`: Double = 0.0001
+                                                                               particles: ParticlesState[V, Future],
+                                                                               particlesReducer: ParticleReducer[V, Future],
+                                                                               potentialCalculator: PotentialCalculator[V],
+                                                                               limitConditions: SpaceConditions[V, Fig],
+                                                                               `∆t`: Double = 0.0001
 ) {
   def init(): Future[LeapFrogIteration[V, Fig]] = {
     val centerOfMassAction: ParticleActionMap[V] = new ParticleActionMap[V](
@@ -62,7 +62,7 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
 
   private def recomputeForceAndPotential(particle1: Particle[V], particle2: Particle[V]): (V, Double) = {
     potentialCalculator.computeForceAndPotential(
-      limitConditions.distanceLimitCondition(particle2.position - particle1.position)
+      limitConditions.getDistanceBetween(particle1.position, particle2.position)
     )
   }
 }

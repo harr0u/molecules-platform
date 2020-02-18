@@ -1,6 +1,7 @@
 import java.io.{BufferedWriter, File, FileWriter}
 
-import calculation.limit_conditions.{BoxLimitConditions, LimitConditions, RectangleLimitConditions}
+import calculation.limitConditions.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
+import calculation.limitConditions.SpaceConditions
 import domain.Particle
 import domain.geometry.vector._
 import calculation.numerical.LeapFrogIteration
@@ -54,7 +55,7 @@ object Molecules extends App {
   }
 
   def build3DLog(boxWidth: Double, sideNumber: Int, velocityFactor: Double, smart: Boolean = true): (Int, LazyList[Future[LeapFrogIteration[Vector3D, CubicFigure]]]) = {
-    val box: BoxLimitConditions = new BoxLimitConditions(Cube(boxWidth));
+    val box: BoxPeriodicSpaceConditions = new BoxPeriodicSpaceConditions(Cube(boxWidth));
     val superSmartMolecules = (smart: Boolean) => {
       val rng = new Random(0L)
 
@@ -80,7 +81,7 @@ object Molecules extends App {
   }
 
   def build2DLog(boxWidth: Double, sideNumber: Int, velocityFactor: Double, smart: Boolean = true): (Int, LazyList[Future[LeapFrogIteration[Vector2D, RectangleFigure]]]) = {
-    val box: RectangleLimitConditions = new RectangleLimitConditions(Square(boxWidth));
+    val box: RectanglePeriodicSpaceConditions = new RectanglePeriodicSpaceConditions(Square(boxWidth));
 
     val superSmartMolecules = (smart: Boolean) => {
       val rng = new Random(0L)
@@ -112,7 +113,7 @@ object Molecules extends App {
 
   def buildLog[V <: AlgebraicVector[V], Fig <: GeometricFigure](
     particles : ParticlesState[V, Future],
-    box: LimitConditions[V, Fig]
+    box: SpaceConditions[V, Fig]
   ): (Int, LazyList[Future[LeapFrogIteration[V, Fig]]]) = {
     val numberOfParticles = particles.counit.length
 

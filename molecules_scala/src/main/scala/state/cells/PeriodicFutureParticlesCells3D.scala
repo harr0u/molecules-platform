@@ -2,7 +2,7 @@ package state.cells
 
 import java.util.concurrent.ExecutorService
 
-import calculation.limit_conditions.LimitConditions
+import calculation.limitConditions.SpaceConditions
 import domain.Particle
 import domain.geometry.figures.CubicFigure
 import domain.geometry.vector.Vector3D
@@ -17,10 +17,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 case class PeriodicFutureParticlesCells3D(
-  limitConditions: LimitConditions[Vector3D, CubicFigure],
-  cellsMetadata: ParticlesCells3DMetadata,
-  private val currentFlatCells: Cells[Vector3D],
-  minimumCellLength: Double = 5.0
+                                           limitConditions: SpaceConditions[Vector3D, CubicFigure],
+                                           cellsMetadata: ParticlesCells3DMetadata,
+                                           private val currentFlatCells: Cells[Vector3D],
+                                           minimumCellLength: Double = 5.0
 ) extends PeriodicParticleCells[Vector3D, Future, Tuple3Same](cellsMetadata) {
 
   override def unit(): Future[ParticlesState[Vector3D, Future]] = {
@@ -86,7 +86,7 @@ case class PeriodicFutureParticlesCells3D(
 }
 
 object PeriodicFutureParticlesCells3D {
-  def create(particles: Seq[Particle[Vector3D]], limitConditions: LimitConditions[Vector3D, CubicFigure], minimumCellLength: Double = 5.0): PeriodicFutureParticlesCells3D = {
+  def create(particles: Seq[Particle[Vector3D]], limitConditions: SpaceConditions[Vector3D, CubicFigure], minimumCellLength: Double = 5.0): PeriodicFutureParticlesCells3D = {
     val cellsMetadata = ParticlesCellMetadata.fromCubicFigure(limitConditions.boundaries)
 
     PeriodicFutureParticlesCells3D(limitConditions, cellsMetadata, makeFlatCells(cellsMetadata, particles), minimumCellLength)

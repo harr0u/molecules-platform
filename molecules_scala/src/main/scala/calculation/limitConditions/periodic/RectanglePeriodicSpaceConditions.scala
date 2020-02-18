@@ -1,9 +1,10 @@
-package calculation.limit_conditions
+package calculation.limitConditions.periodic
 
-import domain.geometry.figures.{Square, Rectangle, RectangleFigure}
+import calculation.limitConditions.SpaceConditions
+import domain.geometry.figures.{Rectangle, RectangleFigure, Square}
 import domain.geometry.vector.Vector2D
 
-class RectangleLimitConditions(override val boundaries: RectangleFigure) extends LimitConditions[Vector2D, RectangleFigure] {
+class RectanglePeriodicSpaceConditions(override val boundaries: RectangleFigure) extends SpaceConditions[Vector2D, RectangleFigure] {
 
   override def positionLimitCondition(position: Vector2D): Vector2D = {
     val coordinateLimit = (_coordinate: Double, length: Double) => {
@@ -14,7 +15,7 @@ class RectangleLimitConditions(override val boundaries: RectangleFigure) extends
     this.applyLimitConditions(position, coordinateLimit)
   }
 
-  override def distanceLimitCondition(distance: Vector2D): Vector2D = {
+  override def getDistanceBetween(point: Vector2D, other: Vector2D): Vector2D = {
     val coordinateLimit = (coordinate: Double, length: Double) => {
       if (Math.abs(coordinate) > (length / 2)) {
         -1 * coordinate.sign * (length - Math.abs(coordinate))
@@ -23,7 +24,7 @@ class RectangleLimitConditions(override val boundaries: RectangleFigure) extends
       }
     }
 
-    this.applyLimitConditions(distance, coordinateLimit)
+    this.applyLimitConditions(other - point, coordinateLimit)
   }
 
   private def applyLimitConditions(vector: Vector2D, coordinateTransformer: (Double, Double) => Double): Vector2D = {
