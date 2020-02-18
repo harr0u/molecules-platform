@@ -10,10 +10,7 @@ object CenterOfMassCalculator {
       val (momentumAcc, massAcc) = acc.getOrElse((p.velocity.zero, 0.0))
 
       Some((momentumAcc + (p.mass *: p.velocity), massAcc + p.mass))
-    }).flatMap((acc) => {
-      val (momentum: V, mass: Double) = acc
-      if (mass > 0) Some((momentum * (1 / mass))) else None
-    })
+    }).flatMap(CenterOfMassCalculator.divideVectorAccByMassOption)
   }
 
   def findCenterMassPosition[V <: AlgebraicVector[V], F[_]](state: ParticlesState[V, F]): Option[V] = {
@@ -21,9 +18,11 @@ object CenterOfMassCalculator {
       val (massPositionAcc, massAcc) = acc.getOrElse((p.velocity.zero, 0.0))
 
       Some((massPositionAcc + (p.mass *: p.position), massAcc + p.mass))
-    }).flatMap((acc) => {
-      val (massPositionAcc: V, mass: Double) = acc
-      if (mass > 0) Some((massPositionAcc * (1 / mass))) else None
-    })
+    }).flatMap(CenterOfMassCalculator.divideVectorAccByMassOption)
+  }
+
+  protected def divideVectorAccByMassOption[V <: AlgebraicVector[V]](acc : (V, Double)): Option[V] = {
+    val (massPositionAcc: V, mass: Double) = acc
+    if (mass > 0) Some((massPositionAcc * (1 / mass))) else None
   }
 }

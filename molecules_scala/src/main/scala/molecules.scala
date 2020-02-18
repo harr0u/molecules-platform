@@ -16,36 +16,42 @@ import scala.util.Random
 
 
 object Molecules extends App {
-  val boxWidth: Double = 60.0
   val numberOfFrames = 2500
 
-  val (numberOfParticles, moleculesLog) = build2DLog(boxWidth, 50, 1.5, true)
+  val framesHistory: LazyList[Future[(Double, Long)]] = buildTotalEnergyLog(
+    boxWidth = 60.0,
+    sideNumber = 50,
+    velocityFactor = 1.5,
+    smart = true
+  )
 
-
-  val framesHistory: LazyList[Future[(Double, Long)]] = moleculesLog.zipWithIndex.map {
-    case (iter, i) => iter.map((iteration) => {
-      val kineticEnergy: Double = iteration.particles.counit.map((p) => p.velocity.squaredLength / 2).iterator.sum / numberOfParticles
-      val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum / numberOfParticles
-      val total: Double = kineticEnergy + potential
-
-      if (i % 25 == 0) {
-        println(f"Frame ${i} - T[${total}] - P[${potential}] - K[${kineticEnergy}] - FPS")
-      }
-
-      (total, System.currentTimeMillis)
-    })
+  val futureTotalEnergyCheck: Future[Unit] = for {
+    (initialTotal, initialEpoch) <- framesHistory(0)
+    (lastTotal, lastEpoch) <- framesHistory(numberOfFrames - 1)
+  } yield {
+    println(f"Total change = ${lastTotal - initialTotal}; FPS = ${numberOfFrames * 1000.0 / (lastEpoch - initialEpoch)}")
   }
 
+  Await.result(futureTotalEnergyCheck, Duration.Inf)
 
-  Await.result(
-    for {
-      (initialTotal, initialEpoch) <- framesHistory(0)
-      (lastTotal, lastEpoch) <- framesHistory(numberOfFrames - 1)
-    } yield {
-      println(f"Total change = ${lastTotal - initialTotal}; FPS = ${numberOfFrames * 1000.0 / (lastEpoch - initialEpoch)}")
-    },
-    Duration.Inf
-  )
+
+  def buildTotalEnergyLog(boxWidth: Double, sideNumber: Int, velocityFactor: Double, smart: Boolean): LazyList[Future[(Double, Long)]] = {
+    val (numberOfParticles: Int, moleculesLog) = build2DLog(boxWidth, sideNumber, velocityFactor, smart)
+
+    moleculesLog.zipWithIndex.map {
+      case (iter, i) => iter.map((iteration) => {
+        val kineticEnergy: Double = iteration.particles.counit.map((p) => p.velocity.squaredLength / 2).iterator.sum / numberOfParticles
+        val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum / numberOfParticles
+        val total: Double = kineticEnergy + potential
+
+        if (i % 25 == 0) {
+          println(f"Frame ${i} - T[${total}] - P[${potential}] - K[${kineticEnergy}] - FPS")
+        }
+
+        (total, System.currentTimeMillis)
+      })
+    }
+  }
 
   def build3DLog(boxWidth: Double, sideNumber: Int, velocityFactor: Double, smart: Boolean = true): (Int, LazyList[Future[LeapFrogIteration[Vector3D, CubicFigure]]]) = {
     val box: BoxLimitConditions = new BoxLimitConditions(Cube(boxWidth));
@@ -94,7 +100,7 @@ object Molecules extends App {
       }
 
       if (smart) {
-        PeriodicFutureParticlesCells2D.create(particles, box, minimumCellLength = 3.0)
+        PeriodicFutureParticlesCells2D.create(particles, box, minimumCellLength = 5.0)
       } else {
         ParticlesSeqState(particles)
       }
@@ -115,7 +121,7 @@ object Molecules extends App {
       new ParticlesStateReducer(),
       new LennardJonesCutOffPotential(cutOffRadius = 5.0),
       box,
-      deltaStepTime = 0.001
+      `∆t` = 0.001
     ).init()
 
 
