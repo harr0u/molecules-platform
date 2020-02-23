@@ -3,7 +3,7 @@ package e2e
 import calculation.limitConditions.SpaceConditions
 import calculation.limitConditions.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
 import calculation.numerical.LeapFrogIteration
-import calculation.physics.{LennardJonesPotential, PotentialCalculator}
+import calculation.physics.{LennardJonesCutOffPotential, LennardJonesPotential, PotentialCalculator}
 import domain.Particle
 import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
@@ -19,89 +19,90 @@ import scala.util.Random
 import org.specs2._
 import org.specs2.specification.AllExpectations
 
-// Validation model is the most accurate (-> slowest) model
-//    Lennard Jones Potential
-//    Leap Frog Integration algorithm
-//    Periodic Cube (Square)
-//    No Reduce Optimization (ParticlesSeqState)
-//    Uniform distributed on the start
-class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
+
+class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
   sequential
 
   "2D" >> {
-    implicit val potentialCalculator: PotentialCalculator[Vector2D] = new LennardJonesPotential()
+    implicit val potentialCalculator: PotentialCalculator[Vector2D] = new LennardJonesCutOffPotential[Vector2D]()
     "Save total energy when 1 molecule is presented" >> {
       val boxWidth = 100.0
+      val rCutOff = 5.0
       val velocityFactor = 50.0
       val box = RectanglePeriodicSpaceConditions(Square(boxWidth))
 
       matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
-        ParticlesSeqState(makeParticlesIn(box.boundaries, 1, velocityFactor)),
-        box,
-        10E1.toInt,
-        1,
-        10E-10
-      )
-    }
-
-    "Save total energy when 36 molecules are presented with density=0.7" >> {
-      val density = 0.7
-      val particlesSideNumber = 6
-
-      val box = {
-        val boxWidth = particlesSideNumber / density
-        RectanglePeriodicSpaceConditions(Square(boxWidth))
-      }
-      val particles = {
-        val velocityFactor = 1.0
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
-      }
-
-      matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
-        particles,
-        box,
-        5E3.toInt,
-        36,
-        1E-2,
-        `∆t` = 0.0001,
-      )
-
-    }
-
-    "Save total energy when 100 molecules are presented with density=0.8" >> {
-      val density = 0.8
-      val particlesSideNumber = 10
-
-      val box = {
-        val boxWidth = particlesSideNumber / density
-        RectanglePeriodicSpaceConditions(Square(boxWidth))
-      }
-      val particles = {
-        val velocityFactor = 1.3
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
-      }
-
-      matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
-        particles,
+        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box, rCutOff),
         box,
         1E4.toInt,
-        100,
+        1,
+        10E-10
+      )xk
+    }
+
+    "Save total energy when 15*15=225 molecules are presented with density=0.7" >> {
+      val density = 0.7
+      val particlesSideNumber = 15
+
+      val box: RectanglePeriodicSpaceConditions = {
+        val boxWidth = particlesSideNumber / density
+        println(s"boxWidth ~> $boxWidth")
+        RectanglePeriodicSpaceConditions(Square(boxWidth))
+      }
+      val particles: PeriodicFutureParticlesCells2D = {
+        val velocityFactor = 1.2
+        val rCutOff = 5.0
+        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)      }
+
+      matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+        particles,
+        box,
+        5E2.toInt,
+        225,
+        1E-4,
+        0.001,
+        verbose = Some(100)
+      )
+    }
+
+    "Save total energy when 30*30=900 molecules are presented with density=0.8" >> {
+      val density = 0.8
+      val particlesSideNumber = 30
+
+      val box = {
+        val boxWidth = particlesSideNumber / density
+        println(boxWidth)
+        RectanglePeriodicSpaceConditions(Square(boxWidth))
+      }
+      val particles = {
+        val velocityFactor = 13.0
+        val rCutOff = 5.0
+        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+      }
+
+      matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+        particles,
+        box,
+        1E3.toInt,
+        900,
         1E-5,
         0.0005,
+        verbose = Some(100)
       )
     }
   }
 
 
   "3D" >> {
-    implicit val potentialCalculator: PotentialCalculator[Vector3D] = new LennardJonesPotential()
+    implicit val potentialCalculator: PotentialCalculator[Vector3D] = new LennardJonesCutOffPotential[Vector3D]()
     "Save total energy when 1 molecule is presented" >> {
       val boxWidth = 100.0
       val velocityFactor = 50.0
       val box = BoxPeriodicSpaceConditions(Cube(boxWidth))
+      val rCutOff = 5.0
 
       matchMeanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
-        ParticlesSeqState(makeParticlesIn(box.boundaries, 1, velocityFactor)),
+        PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box, rCutOff),
         box,
         10E1.toInt,
         1,
@@ -117,9 +118,10 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         val boxWidth = particlesSideNumber / density
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
-      val particles: ParticlesSeqState[Vector3D] = {
-        val velocityFactor = 1.2
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+      val particles: PeriodicFutureParticlesCells3D = {
+        val velocityFactor = 12.0
+        val rCutOff = 5.0
+        PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
       matchMeanSquaredErrorOfTotalEnergy(
@@ -141,9 +143,10 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         val boxWidth = particlesSideNumber / density
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
-      val particles: ParticlesSeqState[Vector3D] = {
-        val velocityFactor = 1.9
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+      val particles: PeriodicFutureParticlesCells3D = {
+        val velocityFactor = 12.0
+        val rCutOff = 5.0
+        PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
 
@@ -152,8 +155,8 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         box,
         5E3.toInt,
         125,
-        5E-3,
-        0.001,
+        1E-4,
+        0.0005,
       )
     }
   }

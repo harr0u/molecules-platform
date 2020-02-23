@@ -10,7 +10,7 @@ import state.cells.PeriodicParticleCells.{Cells, Cell}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Future, blocking}
 
 case class PeriodicFutureParticlesCells2D(
                                            limitConditions: SpaceConditions[Vector2D, RectangleFigure],
@@ -41,10 +41,10 @@ case class PeriodicFutureParticlesCells2D(
 
   override def reduce(reduceFn: (Particle[Vector2D], Particle[Vector2D]) => Particle[Vector2D]): Future[ParticlesState[Vector2D, Future]] = {
     val reduceFutures: Seq[Future[Cell[Vector2D]]] = for ((cell, index) <- currentFlatCells.zipWithIndex) yield {
-      Future[Cell[Vector2D]] {
+      Future[Cell[Vector2D]] { blocking {
         super.reduceCellWithIndex(cell, index, reduceFn)
       }
-    }
+    }}
 
     Future.sequence(reduceFutures).map((newFlatCells) => this.copy(currentFlatCells = newFlatCells))
   }

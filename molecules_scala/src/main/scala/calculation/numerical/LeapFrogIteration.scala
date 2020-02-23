@@ -16,9 +16,8 @@ case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](
                                                                                particles: ParticlesState[V, Future],
                                                                                limitConditions: SpaceConditions[V, Fig],
                                                                                particlesReducer: ParticleReducer[V, Future] = new ParticlesStateReducer[V],
-                                                                               potentialCalculator: PotentialCalculator[V] = new LennardJonesPotential[V],
                                                                                `∆t`: Double = 0.0001
-) {
+                                                                             )(implicit potentialCalculator: PotentialCalculator[V]) {
   def init(): Future[LeapFrogIteration[V, Fig]] = {
     val centerOfMassAction: ParticleActionMap[V] = new ParticleActionMap[V](
       (for {
