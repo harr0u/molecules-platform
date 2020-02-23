@@ -4,7 +4,7 @@ import calculation.limitConditions.SpaceConditions
 import domain.geometry.figures.{Rectangle, RectangleFigure, Square}
 import domain.geometry.vector.Vector2D
 
-class RectanglePeriodicSpaceConditions(override val boundaries: RectangleFigure) extends SpaceConditions[Vector2D, RectangleFigure] {
+case class RectanglePeriodicSpaceConditions(override val boundaries: RectangleFigure) extends SpaceConditions[Vector2D, RectangleFigure] {
 
   override def positionLimitCondition(position: Vector2D): Vector2D = {
     val coordinateLimit = (_coordinate: Double, length: Double) => {

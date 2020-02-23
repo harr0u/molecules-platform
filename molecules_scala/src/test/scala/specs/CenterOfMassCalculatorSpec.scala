@@ -1,7 +1,9 @@
-import org.scalatest._
+package specs
+
 import calculation.physics.CenterOfMassCalculator._
 import domain.Particle
 import domain.geometry.vector._
+import org.scalatest._
 import state.ParticlesSeqState
 
 class CenterOfMassCalculatorSpec extends FlatSpec with Matchers {

@@ -4,7 +4,7 @@ import calculation.limitConditions.SpaceConditions
 import domain.geometry.figures.{Box, Cube, CubicFigure}
 import domain.geometry.vector.Vector3D
 
-class BoxPeriodicSpaceConditions(override val boundaries: CubicFigure) extends SpaceConditions[Vector3D, CubicFigure] {
+case class BoxPeriodicSpaceConditions(override val boundaries: CubicFigure) extends SpaceConditions[Vector3D, CubicFigure] {
 
   override def positionLimitCondition(position: Vector3D): Vector3D = {
     val coordinateLimit = (_coordinate: Double, length: Double) => {

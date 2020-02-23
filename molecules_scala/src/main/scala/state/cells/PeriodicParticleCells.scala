@@ -50,7 +50,7 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
   }
 
   protected def reduceCellWithIndex(cell: Cell[V], index: Int, reduceFn: (Particle[V], Particle[V]) => (Particle[V])): Cell[V] = {
-    val cellsInvolvedInComputation: Seq[Cell[V]] = getAdjacentCells(index)
+    val cellsInvolvedInComputation: Seq[Cell[V]] = getAdjacentCells(index) :+ cell
 
     for ((particle) <- cell) yield {
       cellsInvolvedInComputation.foldLeft(particle)((accParticle, cell) => {

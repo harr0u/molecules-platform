@@ -1,6 +1,8 @@
-import org.scalatest._
+package specs
+
 import domain.Particle
 import domain.geometry.vector._
+import org.scalatest._
 
 class ParticleSpec extends FlatSpec with Matchers {
   "A Particle" should "contain acceleration which depends on Force (F = ma)" in {
