@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutorService
 import calculation.limitConditions.SpaceConditions
 import domain.Particle
 import domain.geometry.figures.CubicFigure
-import domain.geometry.vector.Vector3D
+import domain.geometry.vector.{Vector2D, Vector3D}
 import state.ParticlesState
 import state.cells.ParticlesCellsMetadata.Tuple3Same
 import state.cells.PeriodicParticleCells.Cell
@@ -54,30 +54,21 @@ case class PeriodicFutureParticlesCells3D(
   }
 
   def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector3D]] = {
-    (for {
-      (layerIndex, rowIndex, cellIndex) <- cellsMetadata.flatIndex2Indexes(flatIndex)
-    } yield {
-      for {
-        deltaL <- -1 to 1
-        deltaR <- -1 to 1
-        deltaC <- -1 to 1
-      } yield {
-        val (layersNumber, rowsNumber, cellsNumber) = this.cellsMetadata.cellsNumber
-        (for {
-          flatIndex <- cellsMetadata.indexes2FlatIndex(
-            getPeriodicAdjIndex(layerIndex, deltaL, layersNumber),
-            getPeriodicAdjIndex(rowIndex, deltaR, rowsNumber),
-            getPeriodicAdjIndex(cellIndex, deltaC, cellsNumber)
+    val (layersNumber, rowsNumber, cellsNumber) = this.cellsMetadata.cellsNumber
+
+    cellsMetadata.flatIndex2Indexes(flatIndex).map {
+      case (layerIndex, rowIndex, cellIndex) =>
+        for (deltaL <- -1 to 1; deltaR <- -1 to 1; deltaC <- -1 to 1) yield {
+          cellsMetadata.indexes2FlatIndex(
+            getPeriodicAdjIndex(layerIndex + deltaL, layersNumber),
+            getPeriodicAdjIndex(rowIndex + deltaR, rowsNumber),
+            getPeriodicAdjIndex(cellIndex + deltaC, cellsNumber),
           )
-        } yield {
-          this.currentFlatCells.applyOrElse[Int, Seq[Particle[Vector3D]]](flatIndex, (_) => Seq())
-        }) getOrElse {
-          Seq()
+            .map(flatIndex => this.currentFlatCells.applyOrElse[Int, Cell[Vector3D]](flatIndex, (_) => Seq()))
+            .getOrElse(Seq())
         }
-      }
-    }) getOrElse {
-      Seq()
     }
+      .getOrElse(Seq())
   }
 
   override def getFlatCellIndexOfParticle(particle: Particle[Vector3D]): Option[Int] = {
@@ -95,11 +86,11 @@ object PeriodicFutureParticlesCells3D {
   def makeEmptyFlatCells(cellsMetadata: ParticlesCells3DMetadata): Cells[Vector3D] = {
     val (layersNumber: Int, rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber
 
-    (for {
+    for {
       _ <- (1 to layersNumber)
       _ <- (1 to rowsNumber)
       _ <- (1 to cellsNumber)
-    } yield Seq[Particle[Vector3D]]()).toVector;
+    } yield Seq[Particle[Vector3D]]()
   }
 
   def makeFlatCells(cellsMetadata: ParticlesCells3DMetadata, particles: Seq[Particle[Vector3D]]): Cells[Vector3D] = {

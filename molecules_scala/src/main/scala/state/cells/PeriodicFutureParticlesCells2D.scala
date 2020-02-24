@@ -41,41 +41,28 @@ case class PeriodicFutureParticlesCells2D(
 
   override def reduce(reduceFn: (Particle[Vector2D], Particle[Vector2D]) => Particle[Vector2D]): Future[ParticlesState[Vector2D, Future]] = {
     val reduceFutures: Seq[Future[Cell[Vector2D]]] = for ((cell, index) <- currentFlatCells.zipWithIndex) yield {
-      Future[Cell[Vector2D]] { blocking {
+      Future[Cell[Vector2D]] {
         super.reduceCellWithIndex(cell, index, reduceFn)
-      }
     }}
 
     Future.sequence(reduceFutures).map((newFlatCells) => this.copy(currentFlatCells = newFlatCells))
   }
 
   def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector2D]] = {
-    (for {
-      (rowIndex, cellIndex) <- cellsMetadata.flatIndex2Indexes(flatIndex)
-    } yield {
-      for {
-        deltaR <- -1 to 1
-        deltaC <- -1 to 1
-      } yield {
-        val getPeriodicAdjIndex = (index: Int, delta: Int, number: Int) => {
-          val index_ = (index + delta) % number
-          if (index_ < 0) number + index_ else index_
-        }
-        val (rowsNumber, cellsNumber) = this.cellsMetadata.cellsNumber
-        (for {
-          flatIndex <- cellsMetadata.indexes2FlatIndex(
-            getPeriodicAdjIndex(rowIndex, deltaR, rowsNumber),
-            getPeriodicAdjIndex(cellIndex, deltaC, cellsNumber)
+    val (rowsNumber, cellsNumber) = this.cellsMetadata.cellsNumber
+
+    cellsMetadata.flatIndex2Indexes(flatIndex).map {
+      case (rowIndex, cellIndex) =>
+        for (deltaR <- -1 to 1; deltaC <- -1 to 1) yield {
+          cellsMetadata.indexes2FlatIndex(
+            getPeriodicAdjIndex(rowIndex + deltaR, rowsNumber),
+            getPeriodicAdjIndex(cellIndex + deltaC, cellsNumber)
           )
-        } yield {
-          this.currentFlatCells.applyOrElse[Int, Cell[Vector2D]](flatIndex, (_) => Seq())
-        }) getOrElse {
-          Seq()
+            .map(flatIndex => this.currentFlatCells.applyOrElse[Int, Cell[Vector2D]](flatIndex, (_) => Seq()))
+            .getOrElse(Seq())
         }
-      }
-    }) getOrElse {
-      Seq()
     }
+      .getOrElse(Seq())
   }
 
   override def getFlatCellIndexOfParticle(particle: Particle[Vector2D]): Option[Int] = {

@@ -30,7 +30,7 @@ trait FrameLogTester {
                                                                                      expectedNumberOfParticles: Int,
                                                                                      meanSquaredErrorLimit: Double,
                                                                                      `∆t`: Double = 0.001,
-                                                                                     verbose: Option[Int] = None
+                                                                                     verbose: Option[Int] = Some(100)
                                                                                    )(implicit ee: ExecutionEnv, potential: PotentialCalculator[V]): MatchResult[Future[Double]] = {
     val leapFrogIteration: LeapFrogIteration[V, Fig] = LeapFrogIteration(particles, box, `∆t` = `∆t`)
 

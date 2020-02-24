@@ -34,10 +34,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
         PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box, rCutOff),
         box,
-        1E4.toInt,
+        1E3.toInt,
         1,
         10E-10
-      )xk
+      )
     }
 
     "Save total energy when 15*15=225 molecules are presented with density=0.7" >> {
@@ -57,17 +57,17 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
         particles,
         box,
-        5E2.toInt,
+        1E3.toInt,
         225,
-        1E-4,
+        1E-2,
         0.001,
-        verbose = Some(100)
+        verbose = Some(10)
       )
     }
 
-    "Save total energy when 30*30=900 molecules are presented with density=0.8" >> {
+    "Save total energy when 25*25=625 molecules are presented with density=0.8" >> {
       val density = 0.8
-      val particlesSideNumber = 30
+      val particlesSideNumber = 25
 
       val box = {
         val boxWidth = particlesSideNumber / density
@@ -75,7 +75,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         RectanglePeriodicSpaceConditions(Square(boxWidth))
       }
       val particles = {
-        val velocityFactor = 13.0
+        val velocityFactor = 1.3
         val rCutOff = 5.0
         PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
@@ -83,11 +83,37 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
         particles,
         box,
-        1E3.toInt,
-        900,
+        2E3.toInt,
+        625,
         1E-5,
-        0.0005,
+        0.001,
         verbose = Some(100)
+      )
+    }
+
+    "Save total energy in 200F when 100*100=10E4 molecules are presented with density=0.6" >> {
+      val density = 0.6
+      val particlesSideNumber = 100
+
+      val box = {
+        val boxWidth = particlesSideNumber / density
+        println(boxWidth)
+        RectanglePeriodicSpaceConditions(Square(boxWidth))
+      }
+      val particles = {
+        val velocityFactor = 1.3
+        val rCutOff = 5.0
+        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+      }
+
+      matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+        particles,
+        box,
+        200,
+        625,
+        1E-5,
+        0.001,
+        verbose = Some(20)
       )
     }
   }
@@ -104,7 +130,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       matchMeanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
         PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box, rCutOff),
         box,
-        10E1.toInt,
+        1E2.toInt,
         1,
         10E-10
       )
@@ -127,7 +153,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       matchMeanSquaredErrorOfTotalEnergy(
         particles,
         box,
-        5E4.toInt,
+        5E2.toInt,
         27,
         1E-3,
         0.0001,

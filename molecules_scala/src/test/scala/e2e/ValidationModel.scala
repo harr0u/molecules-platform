@@ -26,8 +26,6 @@ import org.specs2.specification.AllExpectations
 //    No Reduce Optimization (ParticlesSeqState)
 //    Uniform distributed on the start
 class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
-  sequential
-
   "2D" >> {
     implicit val potentialCalculator: PotentialCalculator[Vector2D] = new LennardJonesPotential()
     "Save total energy when 1 molecule is presented" >> {
@@ -60,10 +58,10 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       matchMeanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
         particles,
         box,
-        5E3.toInt,
+        1E4.toInt,
         36,
         1E-2,
-        `∆t` = 0.0001,
+        `∆t` = 0.0005,
       )
 
     }

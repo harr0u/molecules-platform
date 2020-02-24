@@ -22,14 +22,10 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
       if (newParticle.position == particle.position) {
         (rest.appended(newParticle), left)
       } else {
-        (for {
-          newIndex <- getFlatCellIndexOfParticle(newParticle)
-          if (newIndex) != index
-        } yield {
-          (rest, left.appended((newIndex, newParticle)))
-        }) getOrElse {
-          (rest.appended(newParticle), left)
-        }
+        getFlatCellIndexOfParticle(newParticle)
+          .withFilter(newIndex => newIndex != index)
+          .map(newIndex => (rest, left.appended((newIndex, newParticle))))
+          .getOrElse((rest.appended(newParticle), left))
       }
     })
   }
@@ -50,7 +46,7 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
   }
 
   protected def reduceCellWithIndex(cell: Cell[V], index: Int, reduceFn: (Particle[V], Particle[V]) => (Particle[V])): Cell[V] = {
-    val cellsInvolvedInComputation: Seq[Cell[V]] = getAdjacentCells(index) :+ cell
+    val cellsInvolvedInComputation: Seq[Cell[V]] = getAdjacentCells(index)
 
     for ((particle) <- cell) yield {
       cellsInvolvedInComputation.foldLeft(particle)((accParticle, cell) => {
@@ -61,8 +57,8 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
     }
   }
 
-  protected def getPeriodicAdjIndex(index: Int, delta: Int, number: Int): Int = {
-    val index_ = (index + delta) % number
+  protected def getPeriodicAdjIndex(index: Int, number: Int): Int = {
+    val index_ = index % number
     if (index_ < 0) number + index_ else index_
   }
 }
