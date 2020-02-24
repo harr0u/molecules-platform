@@ -8,7 +8,7 @@ class LennardJonesPotential[V <: AlgebraicVector[V]] extends PotentialCalculator
     computeForceAndPotentialWithDistance(particle2.position - particle1.position)
   }
 
-  protected def computeForceAndPotentialWithDistance(distance: V): (V, Double) = {
+  def computeForceAndPotentialWithDistance(distance: V): (V, Double) = {
     val distanceSquaredInverted: Double = 1.0 / distance.squaredLength
     val r6: Double = Math.pow(distanceSquaredInverted, 3)
     val r12: Double = r6 * r6

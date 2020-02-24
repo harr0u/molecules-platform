@@ -10,7 +10,7 @@ import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.fp.Id
 import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
-import state.{ParticlesSeqState, ParticlesState, ParticlesStateReducer}
+import state.{ParticlesSeqState, ParticlesState, ParticlesStateReducer, UpdatePositions}
 import state.cells.{PeriodicFutureParticlesCells2D, PeriodicFutureParticlesCells3D}
 
 import scala.concurrent.duration._
@@ -26,16 +26,33 @@ class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Speci
       val reducer = new ParticlesStateReducer[Vector2D, Id]()
       val state = SingleParticleState[Vector2D](Particle(0, Vector2D(10, 12), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
 
-//      reducer.applyChangeActions(state, List(
-//
-//      ))
-      1 must_=== 1
+      val newState = reducer.applyChangeActions(state)(List(
+        UpdatePositions(p => p.position + Vector2D(1, 1)),
+        UpdatePositions(p => p.position * 2),
+      ))
+
+      newState.counit.length must_=== 1
+      newState.counit(0).position.x must_=== 22
+      newState.counit(0).position.y must_=== 26
+    }
+
+    "force.x: -5 |> (abs) |> (-5) = 0" >> {
+      val reducer = new ParticlesStateReducer[Vector2D, Id]()
+      val state = SingleParticleState[Vector2D](Particle(0, Vector2D(-5, -5), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
+
+      val newState = reducer.applyChangeActions(state)(List(
+        UpdatePositions(p => p.position.mapCoordinates(Math.abs)),
+        UpdatePositions(p => p.position - Vector2D(5, 5)),
+      ))
+
+      newState.counit.length must_=== 1
+      newState.counit(0).position.x must_=== 0
     }
   }
 }
 
 case class SingleParticleState[V <: AlgebraicVector[V]](p: Particle[V]) extends ParticlesState[V, Id] {
-  override def counit: LazyList[Particle[V]] = LazyList(p)
+  override def counit: Seq[Particle[V]] = Seq(p)
   override def map(fn: Particle[V] => Particle[V]): ParticlesState[V, Id] = SingleParticleState(fn(p))
 
   override def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): ParticlesState[V, Id] = this

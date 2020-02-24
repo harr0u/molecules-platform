@@ -14,7 +14,7 @@ import cats.implicits._
 
 // By the way, it looks strange: Leap From Integration algorithm + iterator pattern, can I cut off algo from progrmng?
 case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](`∆t`: Double = 0.0001)
-                                                                             (implicit potentialCalculator: PotentialCalculator[V]) extends TimeIntegrator[V] {
+                                                                             (implicit potentialCalculator: LennardJonesPotential[V]) extends TimeIntegrator[V] {
   def init: Seq[ParticlesChangeAction[V]] = updateForcesAndPotentials
 
   private val `∆t∆t`: Double = `∆t` * `∆t`

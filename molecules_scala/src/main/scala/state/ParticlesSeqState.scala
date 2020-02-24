@@ -11,8 +11,8 @@ case class ParticlesSeqState[V <: AlgebraicVector[V]](
   particles: Seq[Particle[V]]
 ) extends ParticlesState[V, Future] {
 
-  override def counit: LazyList[Particle[V]] = {
-    particles.to(LazyList)
+  override def counit: Seq[Particle[V]] = {
+    particles.to(Seq)
   }
 
   override def unit(): Future[ParticlesState[V, Future]] = {

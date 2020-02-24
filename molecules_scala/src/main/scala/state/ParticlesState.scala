@@ -20,7 +20,7 @@ trait ParticlesState[V <: AlgebraicVector[V], F[_]] {
     def map(fn: (Particle[V]) => Particle[V]): F[ParticlesState[V, F]]
 
     def unit(): F[ParticlesState[V, F]]
-    def counit: LazyList[Particle[V]]
+    def counit: Seq[Particle[V]]
 
     // Result particle should be (updated first particle) <--with<-- (second particle) - !!dumb
     def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]]

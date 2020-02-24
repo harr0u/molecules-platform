@@ -27,7 +27,7 @@ case class PeriodicFutureParticlesCells3D(
     Future.successful(this)
   }
 
-  override def counit: LazyList[Particle[Vector3D]] = currentFlatCells.reduce(_ ++ _).to(LazyList)
+  override def counit: Seq[Particle[Vector3D]] = currentFlatCells.reduce(_ ++ _).to(Seq)
 
   override def map(mapFn: Particle[Vector3D] => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
     val mapFutures: Seq[Future[(Cell[Vector3D], Seq[(Int, Particle[Vector3D])])]] = for {

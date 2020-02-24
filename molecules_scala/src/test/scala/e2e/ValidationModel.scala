@@ -3,7 +3,7 @@ package e2e
 import calculation.limitConditions.SpaceConditions
 import calculation.limitConditions.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
 import calculation.numerical.LeapFrogIteration
-import calculation.physics.{LennardJonesPeriodicCutOffPotential, LennardJonesPeriodicPotential, LennardJonesPotential, PotentialCalculator}
+import calculation.physics.{CutOffPotentialOptimization, LennardJonesPotential, PeriodicPotential}
 import domain.Particle
 import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
@@ -27,13 +27,21 @@ import org.specs2.specification.AllExpectations
 //    No Reduce Optimization (ParticlesSeqState)
 //    Uniform distributed on the start
 class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
+  private def makePotential[V <: AlgebraicVector[V], Fig <: GeometricFigure](box: SpaceConditions[V, Fig]): LennardJonesPotential[V] = {
+    new LennardJonesPotential[V]
+      with PeriodicPotential[V, Fig]
+    {
+      override def limitConditions: SpaceConditions[V, Fig] = box
+    }
+  }
+
   "2D" >> {
     "Save total energy when 1 molecule is presented" >> {
       val boxWidth = 100.0
       val velocityFactor = 50.0
       val box = RectanglePeriodicSpaceConditions(Square(boxWidth))
 
-      implicit val potentialCalculator: PotentialCalculator[Vector2D] = new LennardJonesPeriodicPotential[Vector2D, RectangleFigure](box)
+      implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box)
 
       val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
         ParticlesSeqState(makeParticlesIn(box.boundaries, 1, velocityFactor)),
@@ -53,7 +61,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         val boxWidth = particlesSideNumber / density
         RectanglePeriodicSpaceConditions(Square(boxWidth))
       }
-      implicit val potentialCalculator: PotentialCalculator[Vector2D] = new LennardJonesPeriodicPotential[Vector2D, RectangleFigure](box)
+      implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box)
       val particles = {
         val velocityFactor = 1.0
         ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
@@ -78,7 +86,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         val boxWidth = particlesSideNumber / density
         RectanglePeriodicSpaceConditions(Square(boxWidth))
       }
-      implicit val potentialCalculator: PotentialCalculator[Vector2D] = new LennardJonesPeriodicPotential[Vector2D, RectangleFigure](box)
+      implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box)
       val particles = {
         val velocityFactor = 1.3
         ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
@@ -102,8 +110,8 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       val boxWidth = 100.0
       val velocityFactor = 50.0
       val box = BoxPeriodicSpaceConditions(Cube(boxWidth))
-      implicit val potentialCalculator: PotentialCalculator[Vector3D] = new LennardJonesPeriodicPotential[Vector3D, CubicFigure](box)
 
+      implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box)
       val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
         ParticlesSeqState(makeParticlesIn(box.boundaries, 1, velocityFactor)),
         box,
@@ -123,7 +131,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         val boxWidth = particlesSideNumber / density
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
-      implicit val potentialCalculator: PotentialCalculator[Vector3D] = new LennardJonesPeriodicPotential[Vector3D, CubicFigure](box)
+      implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box)
       val particles: ParticlesSeqState[Vector3D] = {
         val velocityFactor = 1.2
         ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
@@ -149,7 +157,8 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         val boxWidth = particlesSideNumber / density
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
-      implicit val potentialCalculator: PotentialCalculator[Vector3D] = new LennardJonesPeriodicPotential[Vector3D, CubicFigure](box)
+      implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box)
+
       val particles: ParticlesSeqState[Vector3D] = {
         val velocityFactor = 1.9
         ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
