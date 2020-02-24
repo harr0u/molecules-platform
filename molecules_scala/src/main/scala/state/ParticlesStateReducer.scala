@@ -8,16 +8,17 @@ import state.{ParticleReducer, ParticlesChangeAction, ParticleActionMap, Particl
 
 import scala.concurrent.Future
 
-class ParticlesStateReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V, Future] {
+class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticleReducer[V, F] {
 
-  override def applyChangeAction(state: ParticlesState[V, Future], action: ParticlesChangeAction[V]): Future[ParticlesState[V, Future]] = {
+  override def applyChangeAction(state: ParticlesState[V, F])(action: ParticlesChangeAction[V]): F[ParticlesState[V, F]] = {
     action match {
       case map: ParticleActionMap[V] => state.map(map.mapFn)
       case reduce: ParticleActionReduce[V] => state.reduce(reduce.reduceFn)
     }
   }
 
-  override def applyChangeActions(state: ParticlesState[V, Future], actions: Seq[ParticlesChangeAction[V]]): Future[ParticlesState[V, Future]] = {
+  override def applyChangeActions(state: ParticlesState[V, F])(actions: Seq[ParticlesChangeAction[V]])
+                                 (implicit F : Monad[F]): F[ParticlesState[V, F]] = {
     // In case of empty list we should get F[State] type, maybe make method to zip State to F[State],
     // Like unit for container of container
     // Make F - F <: Functor?
@@ -34,7 +35,7 @@ class ParticlesStateReducer[V <: AlgebraicVector[V]] extends ParticleReducer[V, 
     } )
 
     squeezedActions.foldRight(state.unit())((action, newState) =>
-      newState.flatMap((state) => applyChangeAction(state, action))
+      F.flatMap(newState)((state) => applyChangeAction(state)(action))
     )
   }
 }

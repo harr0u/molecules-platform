@@ -1,5 +1,7 @@
 package state
 
+import cats.Monad
+import cats.implicits._
 import domain.Particle
 import domain.geometry.vector._
 

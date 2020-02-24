@@ -23,7 +23,7 @@ import org.specs2.specification.AllExpectations
 class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Specification {
   "Should apply Actions consistently" >> {
     "position.x: 10 |> (+1) |> (*2) = 22" >> {
-      val reducer = new ParticlesStateReducer[Vector2D]()
+      val reducer = new ParticlesStateReducer[Vector2D, Id]()
       val state = SingleParticleState[Vector2D](Particle(0, Vector2D(10, 12), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
 
 //      reducer.applyChangeActions(state, List(

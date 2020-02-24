@@ -2,8 +2,9 @@ package e2e
 
 import calculation.limitConditions.SpaceConditions
 import calculation.limitConditions.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
-import calculation.numerical.LeapFrogIteration
+import calculation.numerical.{FrameLog, LeapFrogIteration}
 import calculation.physics.{LennardJonesPotential, PotentialCalculator}
+import cats.{Applicative, Functor, Monad, Traverse}
 import domain.Particle
 import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
@@ -23,50 +24,59 @@ import org.specs2.specification.AllExpectations
 
 trait FrameLogTester {
   this: mutable.Specification with FutureMatchers =>
-  def matchMeanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure](
-                                                                                     particles: ParticlesState[V, Future],
-                                                                                     box: SpaceConditions[V, Fig],
-                                                                                     numberOfFrames: Int,
-                                                                                     expectedNumberOfParticles: Int,
-                                                                                     meanSquaredErrorLimit: Double,
-                                                                                     `∆t`: Double = 0.001,
-                                                                                     verbose: Option[Int] = Some(100)
-                                                                                   )(implicit ee: ExecutionEnv, potential: PotentialCalculator[V]): MatchResult[Future[Double]] = {
-    val leapFrogIteration: LeapFrogIteration[V, Fig] = LeapFrogIteration(particles, box, `∆t` = `∆t`)
 
-    leapFrogIteration.particles.counit.length must_=== expectedNumberOfParticles
+  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure](
+    particles: ParticlesState[V, Future],
+    box: SpaceConditions[V, Fig],
+    numberOfFrames: Int,
+    expectedNumberOfParticles: Int,
+    `∆t`: Double = 0.001,
+    verbose: Option[Int] = Some(100)
+  )(implicit ee: ExecutionEnv, potential: PotentialCalculator[V]): Future[Double] = {
 
-    val particlesLog = LazyList.iterate(leapFrogIteration.init())(iF => iF.flatMap(iteration => iteration.iterationStep()))
+    implicit val m: Monad[Future] = FrameLogTester.monadInstanceForFuture
+    val frameLog: FrameLog[V, Fig, Future] = new FrameLog[V, Fig, Future](
+      particles,
+      new ParticlesStateReducer[V, Future],
+      box,
+      new LeapFrogIteration[V, Fig],
+      `∆t` = `∆t`
+    )
 
-    val framesHistory: LazyList[Future[(Double, Long)]] = buildTotalEnergyLog(particlesLog, verbose)
+    frameLog.particles.counit.length must_=== expectedNumberOfParticles
 
-    val meanSquaredError: Future[Double] = for {
-      framesEnergy: LazyList[(Double, Long)] <- Future.sequence(framesHistory.take(numberOfFrames))
-    } yield {
+    val particlesLog: LazyList[Future[FrameLog[V, Fig, Future]]] = LazyList.iterate(frameLog.init)(
+      iF => iF.flatMap(iteration => iteration.next)
+    )
+
+    val framesHistory: Future[LazyList[(Double, Long)]] = Future.sequence(
+      buildTotalEnergyLog(particlesLog, verbose).take(numberOfFrames)
+    )
+
+    framesHistory.map(framesEnergy => {
       val energySeq: Seq[Double] = framesEnergy.map(_._1)
       val average = energySeq.iterator.sum / numberOfFrames
 
       energySeq.map(e => Math.pow(e - average, 2)).iterator.sum / numberOfFrames
-    }
-
-    meanSquaredError must be_<(meanSquaredErrorLimit).await(retries = 1, timeout = 120.seconds)
+    })
   }
 
-  def buildTotalEnergyLog[V <: AlgebraicVector[V], F <: GeometricFigure](moleculesLog: LazyList[Future[LeapFrogIteration[V, F]]], verbose: Option[Int] = None)
-                                                                        (implicit ec: ExecutionContext): LazyList[Future[(Double, Long)]] = {
+  def buildTotalEnergyLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_]](moleculesLog: LazyList[F[FrameLog[V, Fig, F]]], verbose: Option[Int] = None)
+                                                                        (implicit ec: ExecutionContext, F : Functor[F]): LazyList[F[(Double, Long)]] = {
     val log = (index: Int, energies: (Double, Double, Double)) => if (verbose.exists(x => index % x == 0)) {
       val (total, potential, kineticEnergy) = energies
       println(f"Frame ${index} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")
     }
 
     moleculesLog.zipWithIndex.map {
-      case (iter, i) => iter.map((iteration) => {
+      case (iter: F[FrameLog[V, Fig, F]], i: Int) => F.map(iter)((iteration) => {
         val numberOfParticles = iteration.particles.counit.length
         val kineticEnergy: Double = iteration.particles.counit.map((p) => p.velocity.squaredLength / 2).iterator.sum / numberOfParticles
         val potential: Double = iteration.particles.counit.map(_.potential).iterator.sum / numberOfParticles
         val total: Double = kineticEnergy + potential
 
         log(i, (total, potential, kineticEnergy))
+
         (total, System.currentTimeMillis)
       })
     }
@@ -108,5 +118,25 @@ trait FrameLogTester {
       )
     }
   }
+}
 
+object FrameLogTester {
+  import scala.concurrent.ExecutionContext.Implicits.global;
+
+  implicit val monadInstanceForFuture: Monad[Future] = new Monad[Future] {
+    override def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.flatMap(a => pure(f(a)))
+
+    override def pure[A](x: A): Future[A] = Future.successful(x)
+
+    override def flatMap[A, B](fa: Future[A])(f: A => Future[B]): Future[B] = fa flatMap f
+
+    override def tailRecM[A, B](a: A)(f: A => Future[Either[A, B]]): Future[B] = {
+      pure(a)
+        .flatMap(f)
+        .flatMap {
+          case Left(v) => tailRecM(v)(f)
+          case Right(b) => Future.successful(b)
+        }
+    }
+  }
 }
