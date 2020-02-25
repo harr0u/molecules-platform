@@ -1,12 +1,12 @@
-package state.cells
+package state.state.cells
 
 import calculation.limitConditions.SpaceConditions
 import domain.Particle
 import domain.geometry.figures.RectangleFigure
 import domain.geometry.vector.Vector2D
-import state.ParticlesState
-import state.cells.ParticlesCellsMetadata.Tuple2Same
-import state.cells.PeriodicParticleCells.{Cells, Cell}
+import simulation.ParticlesState
+import state.state.cells.ParticlesCellsMetadata.Tuple2Same
+import state.state.cells.PeriodicParticleCells.{Cells, Cell}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,11 +19,7 @@ case class PeriodicFutureParticlesCells2D(
                                            minimumCellLength: Double = 5.0
 ) extends PeriodicParticleCells[Vector2D, Future, Tuple2Same](cellsMetadata) {
 
-  override def unit(): Future[ParticlesState[Vector2D, Future]] = {
-    Future.successful(this)
-  }
-
-  override def counit: Seq[Particle[Vector2D]] = currentFlatCells.reduce(_ ++ _).to(Seq)
+  override def getParticles: List[Particle[Vector2D]] = currentFlatCells.reduce(_ ++ _).to(List)
 
   override def map(mapFn: Particle[Vector2D] => Particle[Vector2D]): Future[ParticlesState[Vector2D, Future]] = {
     val mapFutures: Seq[Future[(Seq[Particle[Vector2D]], Seq[(Int, Particle[Vector2D])])]] = for {
@@ -48,7 +44,7 @@ case class PeriodicFutureParticlesCells2D(
     Future.sequence(reduceFutures).map((newFlatCells) => this.copy(currentFlatCells = newFlatCells))
   }
 
-  def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector2D]] = {
+  override def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector2D]] = {
     val (rowsNumber, cellsNumber) = this.cellsMetadata.cellsNumber
 
     cellsMetadata.flatIndex2Indexes(flatIndex).map {

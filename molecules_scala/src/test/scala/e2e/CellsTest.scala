@@ -10,8 +10,8 @@ import e2e.FrameLogTester._
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
-import state.{ParticlesSeqState, ParticlesState, ParticlesStateReducer}
-import state.cells.{PeriodicFutureParticlesCells2D, PeriodicFutureParticlesCells3D}
+import simulation.ParticlesState
+import state.state.cells.{PeriodicFutureParticlesCells2D, PeriodicFutureParticlesCells3D}
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 import org.specs2._
 import org.specs2.specification.AllExpectations
-
+import cats.implicits._
 
 class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
   sequential
@@ -42,11 +42,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       val box = RectanglePeriodicSpaceConditions(Square(boxWidth))
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box, rCutOff)
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy(
         PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box),
         box,
         10E1.toInt,
-        1,
       )
 
       energyError must be_<(10E-10).await(retries = 1, timeout = 120.seconds)
@@ -69,11 +68,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Future](
         particles,
         box,
         5E3.toInt,
-        225,
         `∆t` = 0.0005
       )
 
@@ -97,11 +95,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Future](
         particles,
         box,
         5E3.toInt,
-        625,
         `∆t` = 0.0005
       )
 
@@ -124,11 +121,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Future](
         particles,
         box,
         100.toInt,
-        10000,
         `∆t` = 0.0005
       )
 
@@ -146,11 +142,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
 
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box, rCutOff)
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Future](
         PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box),
         box,
         1E4.toInt,
-        1,
         `∆t` = 0.0005
       )
 
@@ -172,11 +167,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Future](
         particles,
         box,
         1E3.toInt,
-        27,
         `∆t` = 0.0005
       )
 
@@ -200,11 +194,10 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       }
 
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
+      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Future](
         particles,
         box,
         50,
-        1000,
         `∆t` = 0.001
       )
 

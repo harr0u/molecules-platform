@@ -1,10 +1,12 @@
 package specs
 
 import calculation.physics.CenterOfMassCalculator._
+import cats.Id
 import domain.Particle
 import domain.geometry.vector._
 import org.scalatest._
-import state.ParticlesSeqState
+import simulation.state.ParticlesListState
+import cats.implicits._
 
 class CenterOfMassCalculatorSpec extends FlatSpec with Matchers {
   val empty2DParticle = Particle(0, Vector2D.empty, Vector2D.empty, Vector2D.empty, 0.0, 1.0)
@@ -14,27 +16,27 @@ class CenterOfMassCalculatorSpec extends FlatSpec with Matchers {
   val modal3DVector = Vector3D(69, 88, 14)
 
   "findCenterMassVelocity" should "return None for empty ParticlesState" in {
-    val state2D = new ParticlesSeqState[Vector2D](Seq.empty[Particle[Vector2D]])
-    val state3D = new ParticlesSeqState[Vector3D](Seq.empty[Particle[Vector3D]])
+    val state2D = new ParticlesListState[Vector2D, Id](List.empty[Particle[Vector2D]])
+    val state3D = new ParticlesListState[Vector3D, Id](List.empty[Particle[Vector3D]])
 
     assert(findCenterMassVelocity(state2D).isEmpty)
     assert(findCenterMassVelocity(state3D).isEmpty)
   }
 
   it should "return Velocity of particle if it is lonely particle in system" in {
-    val state2D = new ParticlesSeqState[Vector2D](Seq(empty2DParticle.copy(velocity = modal2DVector)))
-    val state3D = new ParticlesSeqState[Vector3D](Seq(empty3DParticle.copy(velocity = modal3DVector)))
+    val state2D = new ParticlesListState[Vector2D, Id](List(empty2DParticle.copy(velocity = modal2DVector)))
+    val state3D = new ParticlesListState[Vector3D, Id](List(empty3DParticle.copy(velocity = modal3DVector)))
 
     assert(findCenterMassVelocity(state2D).contains(modal2DVector))
     assert(findCenterMassVelocity(state3D).contains(modal3DVector))
   }
 
   it should "return zero Vector if system contains 2 identical particles with opposite velocities" in {
-    val state2D = new ParticlesSeqState[Vector2D](Seq(
+    val state2D = new ParticlesListState[Vector2D, Id](List(
       empty2DParticle.copy(velocity = modal2DVector),
       empty2DParticle.copy(velocity = modal2DVector * -1),
     ))
-    val state3D = new ParticlesSeqState[Vector3D](Seq(
+    val state3D = new ParticlesListState[Vector3D, Id](List(
       empty3DParticle.copy(velocity = modal3DVector),
       empty3DParticle.copy(velocity = modal3DVector * -1),
     ))
@@ -44,16 +46,16 @@ class CenterOfMassCalculatorSpec extends FlatSpec with Matchers {
   }
 
   "findCenterMassPosition" should "return None for empty ParticlesState" in {
-    val state2D = new ParticlesSeqState[Vector2D](Seq.empty[Particle[Vector2D]])
-    val state3D = new ParticlesSeqState[Vector3D](Seq.empty[Particle[Vector3D]])
+    val state2D = new ParticlesListState[Vector2D, Id](List.empty[Particle[Vector2D]])
+    val state3D = new ParticlesListState[Vector3D, Id](List.empty[Particle[Vector3D]])
 
     assert(findCenterMassPosition(state2D).isEmpty)
     assert(findCenterMassPosition(state3D).isEmpty)
   }
 
   it should "return position of particle in case of alone Particle" in {
-    val state2D = new ParticlesSeqState[Vector2D](Seq(empty2DParticle.copy(position = modal2DVector)))
-    val state3D = new ParticlesSeqState[Vector3D](Seq(empty3DParticle.copy(position = modal3DVector)))
+    val state2D = new ParticlesListState[Vector2D, Id](List(empty2DParticle.copy(position = modal2DVector)))
+    val state3D = new ParticlesListState[Vector3D, Id](List(empty3DParticle.copy(position = modal3DVector)))
 
     assert(findCenterMassPosition(state2D).contains(modal2DVector))
     assert(findCenterMassPosition(state3D).contains(modal3DVector))

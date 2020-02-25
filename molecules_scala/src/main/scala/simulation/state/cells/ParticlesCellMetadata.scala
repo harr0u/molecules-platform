@@ -1,7 +1,7 @@
-package state.cells
+package state.state.cells
 
 import domain.geometry.figures.{CubicFigure, RectangleFigure}
-import state.cells.ParticlesCellsMetadata.{Tuple2Same, Tuple3Same}
+import state.state.cells.ParticlesCellsMetadata.{Tuple2Same, Tuple3Same}
 
 object ParticlesCellMetadata {
   private def findNumberOfCellsInDirection(directionLength: Double, minimumCellLength: Double = 5.0): Int = {

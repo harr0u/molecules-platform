@@ -1,9 +1,9 @@
-package state.cells
+package state.state.cells
 
 import domain.Particle
 import domain.geometry.vector.{AlgebraicVector, Vector3D}
-import state.ParticlesState
-import state.cells.PeriodicParticleCells.{Cell, Cells}
+import simulation.ParticlesState
+import state.state.cells.PeriodicParticleCells.{Cell, Cells}
 
 import scala.collection.immutable.Seq
 

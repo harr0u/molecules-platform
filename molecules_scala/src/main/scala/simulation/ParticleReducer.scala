@@ -1,8 +1,8 @@
-package state
+package simulation
 
 import cats.Monad
 import domain.geometry.vector.AlgebraicVector
-
+import actions.ParticlesChangeAction
 
 trait ParticleReducer[V <: AlgebraicVector[V], F[_]] {
   def applyChangeAction(particlesContainer: ParticlesState[V, F])(action: ParticlesChangeAction[V]): F[ParticlesState[V, F]]

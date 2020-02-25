@@ -1,4 +1,4 @@
-package state.cells
+package state.state.cells
 
 import java.util.concurrent.ExecutorService
 
@@ -6,11 +6,11 @@ import calculation.limitConditions.SpaceConditions
 import domain.Particle
 import domain.geometry.figures.CubicFigure
 import domain.geometry.vector.{Vector2D, Vector3D}
-import state.ParticlesState
-import state.cells.ParticlesCellsMetadata.Tuple3Same
-import state.cells.PeriodicParticleCells.Cell
-import state.cells.PeriodicParticleCells.Cells
-import state.cells.PeriodicParticleCells.{Cell, Cells}
+import simulation.ParticlesState
+import state.state.cells.ParticlesCellsMetadata.Tuple3Same
+import state.state.cells.PeriodicParticleCells.Cell
+import state.state.cells.PeriodicParticleCells.Cells
+import state.state.cells.PeriodicParticleCells.{Cell, Cells}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -23,11 +23,7 @@ case class PeriodicFutureParticlesCells3D(
                                            minimumCellLength: Double = 5.0
 ) extends PeriodicParticleCells[Vector3D, Future, Tuple3Same](cellsMetadata) {
 
-  override def unit(): Future[ParticlesState[Vector3D, Future]] = {
-    Future.successful(this)
-  }
-
-  override def counit: Seq[Particle[Vector3D]] = currentFlatCells.reduce(_ ++ _).to(Seq)
+  override def getParticles: List[Particle[Vector3D]] = currentFlatCells.reduce(_ ++ _).to(List)
 
   override def map(mapFn: Particle[Vector3D] => Particle[Vector3D]): Future[ParticlesState[Vector3D, Future]] = {
     val mapFutures: Seq[Future[(Cell[Vector3D], Seq[(Int, Particle[Vector3D])])]] = for {

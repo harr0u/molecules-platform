@@ -1,20 +1,14 @@
 package calculation.numerical
 
-import domain.geometry.figures.GeometricFigure
-import calculation.limitConditions.SpaceConditions
-import calculation.physics.{CenterOfMassCalculator, LennardJonesPotential, PotentialCalculator}
+import calculation.physics.LennardJonesPotential
 import domain.Particle
+import domain.geometry.figures.GeometricFigure
 import domain.geometry.vector._
-import state.{ParticleActionMap, ParticleReducer, ParticlesChangeAction, ParticlesState, ParticlesStateReducer, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import cats.implicits._
+import simulation.actions._
 
 
 // By the way, it looks strange: Leap From Integration algorithm + iterator pattern, can I cut off algo from progrmng?
-case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](`∆t`: Double = 0.0001)
-                                                                             (implicit potentialCalculator: LennardJonesPotential[V]) extends TimeIntegrator[V] {
+case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](`∆t`: Double = 0.0001)(implicit potentialCalculator: LennardJonesPotential[V]) extends TimeIntegrator[V] {
   def init: Seq[ParticlesChangeAction[V]] = updateForcesAndPotentials
 
   private val `∆t∆t`: Double = `∆t` * `∆t`

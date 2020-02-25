@@ -1,12 +1,9 @@
-package state
+package simulation.reducers
 
-import cats.{Functor, Monad}
-import domain.Particle
+import cats.{Applicative, Monad}
 import domain.geometry.vector.AlgebraicVector
-import scala.concurrent.ExecutionContext.Implicits.global
-import state.{ParticleReducer, ParticlesChangeAction, ParticleActionMap, ParticleActionReduce, UpdateVelocities, ZeroForces, ZeroPotentials}
-
-import scala.concurrent.Future
+import simulation.{ParticleReducer, ParticlesState}
+import simulation.actions.{ParticleActionMap, ParticleActionReduce, ParticlesChangeAction}
 
 class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticleReducer[V, F] {
 
@@ -34,8 +31,8 @@ class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticleReduc
       case Nil => List(act)
     } )
 
-    squeezedActions.foldRight(state.unit())((action, newState) =>
-      F.flatMap(newState)((state) => applyChangeAction(state)(action))
+    squeezedActions.foldRight(F.pure(state))((action, newStateF) =>
+      F.flatMap(newStateF)((newState) => applyChangeAction(newState)(action))
     )
   }
 }

@@ -6,20 +6,21 @@ import calculation.physics.{CenterOfMassCalculator, LennardJonesPotential, Poten
 import cats.Monad
 import domain.Particle
 import domain.geometry.vector._
-import state.{ParticleActionMap, ParticleReducer, ParticlesChangeAction, ParticlesState, ParticlesStateReducer, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
+import simulation.actions.{ParticleActionMap, ParticlesChangeAction, UpdateForceAndPotential, UpdatePositions, UpdateVelocities, ZeroForces, ZeroPotentials}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import cats.implicits._
+import simulation.{ParticleReducer, ParticlesState}
 
 
 // By the way, it looks strange: Leap From Integration algorithm + iterator pattern, can I cut off algo from progrmng?
 case class FrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, M[_]](
                                                                                particles: ParticlesState[V, M],
-                                                                               particlesReducer: ParticleReducer[V, M],
-                                                                               limitConditions: SpaceConditions[V, Fig],
-                                                                               integrationAlgorithm: TimeIntegrator[V],
-                                                                               `∆t`: Double = 0.0001
+                                                                               protected val particlesReducer: ParticleReducer[V, M],
+                                                                               protected val limitConditions: SpaceConditions[V, Fig],
+                                                                               protected val integrationAlgorithm: TimeIntegrator[V],
+                                                                               protected val `∆t`: Double = 0.0001
                                                                              )(implicit M : Monad[M], potentialCalculator: PotentialCalculator[V]) {
 
   def init: M[FrameLog[V, Fig, M]] = {

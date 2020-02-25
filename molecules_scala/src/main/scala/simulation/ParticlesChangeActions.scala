@@ -1,8 +1,7 @@
-package state
+package simulation.actions
 
 import domain.Particle
 import domain.geometry.vector.AlgebraicVector
-import state.UpdateForceAndPotential.{ForceAndPotentialCalculator, ReduceParticles}
 
 sealed trait ParticlesChangeAction[V <: AlgebraicVector[V]]
 
@@ -26,17 +25,14 @@ case class ZeroForces[V <: AlgebraicVector[V]]()
 case class ZeroPotentials[V <: AlgebraicVector[V]]()
   extends ParticleActionMap[V]((particle) => particle.copy(potential = 0.0))
 
-class ParticleActionReduce[V <: AlgebraicVector[V]](val reduceFn: ReduceParticles[V])
+class ParticleActionReduce[V <: AlgebraicVector[V]](val reduceFn: (Particle[V], Particle[V]) => Particle[V])
   extends ParticlesChangeAction[V]
 
-case class UpdateForceAndPotential[V <: AlgebraicVector[V]](fn: ForceAndPotentialCalculator[V])
-  extends ParticleActionReduce[V](UpdateForceAndPotential.fnToReduceFn(fn))
+case class UpdateForceAndPotential[V <: AlgebraicVector[V]](fn: (Particle[V], Particle[V]) => (V, Double))
+  extends ParticleActionReduce[V](UpdateForceAndPotential.potentialFnToReduceFn(fn))
 
 object UpdateForceAndPotential {
-  type ForceAndPotentialCalculator[V <: AlgebraicVector[V]] = (Particle[V], Particle[V]) => (V, Double)
-  type ReduceParticles[V <: AlgebraicVector[V]] = (Particle[V], Particle[V]) => Particle[V]
-
-  def fnToReduceFn[V <: AlgebraicVector[V]]: (ForceAndPotentialCalculator[V]) => ReduceParticles[V] = (fn) => {
+  def potentialFnToReduceFn[V <: AlgebraicVector[V]]: ((Particle[V], Particle[V]) => (V, Double)) => (Particle[V], Particle[V]) => Particle[V] = (fn) => {
     (particle, other) => {
       val (force, potential) = fn(particle, other)
 

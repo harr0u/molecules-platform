@@ -4,13 +4,13 @@ import calculation.limitConditions.SpaceConditions
 import calculation.limitConditions.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
 import calculation.numerical.LeapFrogIteration
 import calculation.physics.{CutOffPotentialOptimization, LennardJonesPotential, PeriodicPotential}
+import cats.Id
 import domain.Particle
-import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
+import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, Square, RectangleFigure}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
-import state.{ParticlesSeqState, ParticlesState, ParticlesStateReducer}
-import state.cells.{PeriodicFutureParticlesCells2D, PeriodicFutureParticlesCells3D}
+import simulation.state.ParticlesListState
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,7 +24,7 @@ import org.specs2.specification.AllExpectations
 //    Lennard Jones Potential
 //    Leap Frog Integration algorithm
 //    Periodic Cube (Square)
-//    No Reduce Optimization (ParticlesSeqState)
+//    No Reduce Optimization (ParticlesListState)
 //    Uniform distributed on the start
 class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
   private def makePotential[V <: AlgebraicVector[V], Fig <: GeometricFigure](box: SpaceConditions[V, Fig]): LennardJonesPotential[V] = {
@@ -43,14 +43,14 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
 
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box)
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
-        ParticlesSeqState(makeParticlesIn(box.boundaries, 1, velocityFactor)),
+      val energyError: Double = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Id](
+        ParticlesListState[Vector2D, Id](makeParticlesIn(box.boundaries, 1, velocityFactor)),
         box,
         10E1.toInt,
         1,
       )
 
-      energyError must be_<(10E-10).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(10E-10)
     }
 
     "Save total energy when 36 molecules are presented with density=0.7" >> {
@@ -64,18 +64,17 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box)
       val particles = {
         val velocityFactor = 1.0
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+        ParticlesListState[Vector2D, Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+      val energyError: Double = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Id](
         particles,
         box,
         5E3.toInt,
-        36,
         `∆t` = 0.0005
       )
 
-      energyError must be_<(1E-2).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-2)
     }
 
     "Save total energy when 100 molecules are presented with density=0.8" >> {
@@ -89,18 +88,17 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box)
       val particles = {
         val velocityFactor = 1.3
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+        ParticlesListState[Vector2D, Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure](
+      val energyError: Double = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Id](
         particles,
         box,
         1E3.toInt,
-        100,
         `∆t` = 0.0005
       )
 
-      energyError must be_<(1E-5).await(1, 30.seconds)
+      energyError must be_<(1E-5)
     }
   }
 
@@ -112,15 +110,14 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       val box = BoxPeriodicSpaceConditions(Cube(boxWidth))
 
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box)
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
-        ParticlesSeqState(makeParticlesIn(box.boundaries, 1, velocityFactor)),
+      val energyError: Double = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Id](
+        ParticlesListState[Vector3D, Id](makeParticlesIn(box.boundaries, 1, velocityFactor)),
         box,
         100.toInt,
-        1,
         `∆t` = 0.0005
       )
 
-      energyError must be_<(1E-10).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-10)
     }
 
     "Save total energy when 27 molecules are presented with density=0.7" >> {
@@ -132,20 +129,19 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box)
-      val particles: ParticlesSeqState[Vector3D] = {
+      val particles = {
         val velocityFactor = 1.2
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+        ParticlesListState[Vector3D, Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
+      val energyError: Double = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Id](
         particles,
         box,
         5E3.toInt,
-        27,
         `∆t` = 0.0005
       )
 
-      energyError must be_<(1E-2).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-2)
 
     }
 
@@ -159,21 +155,20 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       }
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box)
 
-      val particles: ParticlesSeqState[Vector3D] = {
+      val particles = {
         val velocityFactor = 1.9
-        ParticlesSeqState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+        ParticlesListState[Vector3D, Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
       }
 
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure](
+      val energyError: Double = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Id](
         particles,
         box,
         5E3.toInt,
-        125,
         `∆t` = 0.0005
       )
 
-      energyError must be_<(1E-3).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-3)
     }
   }
 }

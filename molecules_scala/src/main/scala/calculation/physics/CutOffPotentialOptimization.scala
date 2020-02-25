@@ -2,7 +2,7 @@ package calculation.physics
 
 import domain.Particle
 import domain.geometry.vector.AlgebraicVector
-import state.ParticlesSeqState
+import simulation.state.ParticlesListState
 
 abstract trait CutOffPotentialOptimization[V <: AlgebraicVector[V]] extends PotentialCalculator[V] {
   def cutOffDistance: Double
