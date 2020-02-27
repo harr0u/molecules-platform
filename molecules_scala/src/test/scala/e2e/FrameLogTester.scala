@@ -2,9 +2,10 @@ package e2e
 
 import calculation.physics.potentials.PairwisePotentialCalculator
 import calculation.space.SpaceConditions
+import calculation.space.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
 import cats.{Functor, Monad, Traverse}
 import domain.Particle
-import domain.geometry.figures.{CubicFigure, GeometricFigure, RectangleFigure}
+import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.matcher.FutureMatchers
 import simulation.ParticlesState
@@ -21,6 +22,24 @@ import scala.util.Random
 trait FrameLogTester {
   this: mutable.Specification with FutureMatchers =>
 
+  def buildSquareBox(particlesSideNumber: Int, density: Double): Option[SpaceConditions[Vector2D, RectangleFigure]] = {
+    calculateWidthWithSideCount(particlesSideNumber, density)
+      .map(width => RectanglePeriodicSpaceConditions(Square(width)))
+  }
+
+  def buildCubeBox(particlesSideNumber: Int, density: Double): Option[SpaceConditions[Vector3D, CubicFigure]] = {
+    calculateWidthWithSideCount(particlesSideNumber, density)
+      .map(width => BoxPeriodicSpaceConditions(Cube(width)))
+  }
+
+  protected def calculateWidthWithSideCount(particlesSideNumber: Int, density: Double): Option[Double] = {
+    if (density > 0.0 && particlesSideNumber > 0) {
+      Some(particlesSideNumber / density)
+    } else {
+      None
+    }
+  }
+
   def buildFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Monad](
     particles: ParticlesState[V, F],
     box: SpaceConditions[V, Fig],
@@ -29,11 +48,11 @@ trait FrameLogTester {
     PeriodicLennardJonesFrameLog(particles, new ParticlesStateReducer[V, F], box, `∆t`)
   }
 
-  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_]](
+  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Monad](
     frameLog: FrameLog[V, F],
     numberOfFrames : Int,
     verbose: Option[Int] = Some(100)
-  )(implicit F : Monad[F], SeqForF : Traverse[List]): F[Double] = {
+  )(implicit SeqForF : Traverse[List]): F[Double] = {
 
     val particlesLog: LazyList[F[FrameLog[V, F]]] = LazyList.iterate(frameLog.init, numberOfFrames)(
       iF => iF.flatMap(iteration => iteration.next)
