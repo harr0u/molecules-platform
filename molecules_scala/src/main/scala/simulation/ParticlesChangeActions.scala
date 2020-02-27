@@ -35,6 +35,7 @@ object UpdateForceAndPotential {
   def potentialFnToReduceFn[V <: AlgebraicVector[V]]: ((Particle[V], Particle[V]) => (V, Double)) => (Particle[V], Particle[V]) => Particle[V] = (fn) => {
     (particle, other) => {
       val (force, potential) = fn(particle, other)
+      val a: UpdatePositions[V] = UpdatePositions[V](p => p.position)
 
       particle.copy(force = particle.force + force, potential = particle.potential + potential)
     }

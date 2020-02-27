@@ -2,10 +2,10 @@ package simulation.reducers
 
 import cats.{Applicative, Monad}
 import domain.geometry.vector.AlgebraicVector
-import simulation.{ParticleReducer, ParticlesState}
+import simulation.{ParticlesReducer, ParticlesState}
 import simulation.actions.{ParticleActionMap, ParticleActionReduce, ParticlesChangeAction}
 
-class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticleReducer[V, F] {
+class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticlesReducer[V, F] {
 
   override def applyChangeAction(state: ParticlesState[V, F])(action: ParticlesChangeAction[V]): F[ParticlesState[V, F]] = {
     action match {

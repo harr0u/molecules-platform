@@ -1,4 +1,4 @@
-package calculation.limitConditions
+package calculation.space
 
 import domain.geometry.figures.GeometricFigure
 import domain.geometry.vector.AlgebraicVector

@@ -1,5 +1,7 @@
 package state.state.cells
 
+import cats.{Monad, Traverse}
+import cats.implicits._
 import domain.Particle
 import domain.geometry.vector.{AlgebraicVector, Vector3D}
 import simulation.ParticlesState
@@ -7,15 +9,46 @@ import state.state.cells.PeriodicParticleCells.{Cell, Cells}
 
 import scala.collection.immutable.Seq
 
-abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
-                                                                               cellsMetadata: ParticlesCellsMetadata[Tuple],
-                                                                             ) extends ParticlesState[V, F] {
+case class EscapedParticle[V <: AlgebraicVector[V]](particle: Particle[V], newCellIndex: Int)
 
+abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_] : Monad, Tuple[_]](implicit SeqForF : Traverse[List]) extends ParticlesState[V, F] {
+  def cellsMetadata: ParticlesCellsMetadata[Tuple]
+  def currentFlatCells: Cells[V]
   def getAdjacentCells(flatIndex: Int): Seq[Cell[V]]
   def getFlatCellIndexOfParticle(particle: Particle[V]): Option[Int]
+  def updateWithFlatCells(currentFlatCells: Cells[V]): PeriodicParticleCells[V, F, Tuple]
 
-  protected def mapCellWithIndex(cell: Cell[V], index: Int, mapFn: (Particle[V]) => Particle[V]): (Cell[V], Seq[(Int, Particle[V])]) = {
-    cell.foldLeft((Cell[V](), Seq[(Int, Particle[V])]()))((acc, particle) => {
+  val F = implicitly[Monad[F]]
+
+  override def getParticles: List[Particle[V]] = currentFlatCells.reduce(_ ++ _).to(List)
+
+  override def map(mapFn: Particle[V] => Particle[V]): F[ParticlesState[V, F]] = {
+    val mapFs: List[F[(Cell[V], Seq[EscapedParticle[V]])]] = for {
+      (cell, index) <- currentFlatCells.zipWithIndex.toList
+    } yield {
+      F.pure {
+        mapCellWithIndex(cell, index, mapFn)
+      }
+    }
+    for (computedRawFlatCells <- SeqForF.sequence(mapFs)) yield {
+      this.updateWithFlatCells(sewMappedCellsIntoFlatCells(computedRawFlatCells))
+    }
+  }
+
+  override def reduce(reduceFn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]] = {
+    val reduceFs: List[F[Cell[V]]] = for {
+      (cell, index) <- currentFlatCells.zipWithIndex.toList
+    } yield {
+      F.pure {
+        reduceCellWithIndex(cell, index, reduceFn)
+      }
+    }
+
+    SeqForF.sequence(reduceFs).map(newFlatCells=> this.updateWithFlatCells(newFlatCells))
+  }
+
+  protected def mapCellWithIndex(cell: Cell[V], index: Int, mapFn: (Particle[V]) => Particle[V]): (Cell[V], Seq[EscapedParticle[V]]) = {
+    cell.foldLeft((Cell[V](), Seq[EscapedParticle[V]]()))((acc, particle) => {
       val (rest, left) = acc
 
       val newParticle = mapFn(particle)
@@ -24,22 +57,21 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_], Tuple[_]](
       } else {
         getFlatCellIndexOfParticle(newParticle)
           .withFilter(newIndex => newIndex != index)
-          .map(newIndex => (rest, left.appended((newIndex, newParticle))))
+          .map(newIndex => (rest, left.appended(EscapedParticle(newParticle, newIndex))))
           .getOrElse((rest.appended(newParticle), left))
       }
     })
   }
 
 
-  protected def sewMappedCellsIntoFlatCells(computedFlatCells: Seq[(Cell[V], Seq[(Int, Particle[V])])]): Cells[V]  = {
+  protected def sewMappedCellsIntoFlatCells(computedFlatCells: Seq[(Cell[V], Seq[EscapedParticle[V]])]): Cells[V]  = {
     val currentCellsWithoutLeftParticles : Cells[V] = computedFlatCells.map(_._1).toVector
-    val particlesFromCellsThatLeft: Seq[Seq[(Int, Particle[V])]] = computedFlatCells.map(_._2)
+    val escapedParticles: Seq[Seq[EscapedParticle[V]]] = computedFlatCells.map(_._2)
 
-    particlesFromCellsThatLeft.foldLeft(currentCellsWithoutLeftParticles)(
+    escapedParticles.foldLeft(currentCellsWithoutLeftParticles)(
       (particlesAcc, leftParticlesFromCell) => {
-        leftParticlesFromCell.foldLeft(particlesAcc)((particlesAcc1, leftParticleWithIndex) => {
-          val (newCellIndex, leftParticle) = leftParticleWithIndex
-          particlesAcc1.updated(newCellIndex, particlesAcc1(newCellIndex).appended(leftParticle))
+        leftParticlesFromCell.foldLeft(particlesAcc)((particlesAcc1, p: EscapedParticle[V]) => {
+          particlesAcc1.updated(p.newCellIndex, particlesAcc1(p.newCellIndex).appended(p.particle))
         })
       }
     )

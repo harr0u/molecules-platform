@@ -1,10 +1,8 @@
-package calculation.physics
+package calculation.physics.potentials
 
-import domain.Particle
 import domain.geometry.vector.AlgebraicVector
-import simulation.state.ParticlesListState
 
-abstract trait CutOffPotentialOptimization[V <: AlgebraicVector[V]] extends PotentialCalculator[V] {
+abstract trait CutOffPotentialOptimization[V <: AlgebraicVector[V]] extends LennardJonesPotential[V] {
   def cutOffDistance: Double
 
   abstract override def computeForceAndPotentialWithDistance(distance: V): (V, Double) = {

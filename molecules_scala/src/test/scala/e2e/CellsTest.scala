@@ -1,9 +1,9 @@
 package e2e
 
-import calculation.limitConditions.SpaceConditions
-import calculation.limitConditions.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
-import calculation.numerical.LeapFrogIteration
-import calculation.physics.{CutOffPotentialOptimization, LennardJonesPotential, PeriodicPotential}
+import calculation.physics.potentials.{CutOffPotentialOptimization, LennardJonesPotential, PeriodicPotential}
+import calculation.space.SpaceConditions
+import calculation.space.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
+import cats.Id
 import domain.Particle
 import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import e2e.FrameLogTester._
@@ -11,7 +11,7 @@ import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
 import simulation.ParticlesState
-import state.state.cells.{PeriodicFutureParticlesCells2D, PeriodicFutureParticlesCells3D}
+import state.state.cells.{PeriodicParticlesCells2D, PeriodicParticlesCells3D}
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,13 +42,15 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       val box = RectanglePeriodicSpaceConditions(Square(boxWidth))
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box, rCutOff)
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy(
-        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box),
-        box,
-        10E1.toInt,
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy(
+        buildFrameLog(
+          PeriodicParticlesCells2D.create[Id](makeParticlesIn(box.boundaries, 1, velocityFactor), box),
+          box
+        ),
+        100,
       )
 
-      energyError must be_<(10E-10).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(10E-10)
     }
 
     "Save total energy when 15*15=225 molecules are presented with density=0.7" >> {
@@ -63,19 +65,17 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
 
       val rCutOff = 5.0
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box, rCutOff)
-      val particles: PeriodicFutureParticlesCells2D = {
+      val particles: PeriodicParticlesCells2D[Id] = {
         val velocityFactor = 1.2
-        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+        PeriodicParticlesCells2D.create[Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Future](
-        particles,
-        box,
-        5E3.toInt,
-        `∆t` = 0.0005
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy(
+        buildFrameLog(particles, box, `∆t` = 0.0005),
+        5000,
       )
 
-      energyError must be_<(1E-2).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-2)
     }
 
     "Save total energy when 25*25=625 molecules are presented with density=0.8" >> {
@@ -92,17 +92,15 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box, rCutOff)
       val particles = {
         val velocityFactor = 1.3
-        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+        PeriodicParticlesCells2D.create[Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Future](
-        particles,
-        box,
-        5E3.toInt,
-        `∆t` = 0.0005
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy(
+        buildFrameLog(particles, box, `∆t` = 0.0005),
+        5000
       )
 
-      energyError must be_<(1E-2).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-2)
     }
 
     "Save total energy in 100F when 100*100=10E4 molecules are presented with density=0.6" >> {
@@ -118,17 +116,15 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = makePotential(box, rCutOff)
       val particles = {
         val velocityFactor = 1.3
-        PeriodicFutureParticlesCells2D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+        PeriodicParticlesCells2D.create[Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, Future](
-        particles,
-        box,
-        100.toInt,
-        `∆t` = 0.0005
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy(
+        buildFrameLog(particles, box, `∆t` = 0.0005),
+        100,
       )
 
-      energyError must be_<(1E-2).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-2)
     }
   }
 
@@ -142,14 +138,16 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
 
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box, rCutOff)
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Future](
-        PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, 1, velocityFactor), box),
-        box,
-        1E4.toInt,
-        `∆t` = 0.0005
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Id](
+        buildFrameLog(
+          PeriodicParticlesCells3D.create[Id](makeParticlesIn(box.boundaries, 1, velocityFactor), box),
+          box,
+          `∆t` = 0.0005
+        ),
+        500,
       )
 
-      energyError must be_<(1E-5).await(1, 30.seconds)
+      energyError must be_<(1E-5)
     }
 
     "Save total energy when 27 molecules are presented with density=0.7" >> {
@@ -162,19 +160,17 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box, rCutOff)
-      val particles: PeriodicFutureParticlesCells3D = {
+      val particles: PeriodicParticlesCells3D[Id] = {
         val velocityFactor = 12.0
-        PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+        PeriodicParticlesCells3D.create[Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Future](
-        particles,
-        box,
-        1E3.toInt,
-        `∆t` = 0.0005
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy(
+        buildFrameLog(particles, box, `∆t` = 0.0005),
+        1000,
       )
 
-      energyError must be_<(1E-2).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-2)
 
     }
 
@@ -188,20 +184,18 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         BoxPeriodicSpaceConditions(Cube(boxWidth))
       }
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = makePotential(box, rCutOff)
-      val particles: PeriodicFutureParticlesCells3D = {
+      val particles: PeriodicParticlesCells3D[Id] = {
         val velocityFactor = 1.2
-        PeriodicFutureParticlesCells3D.create(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
+        PeriodicParticlesCells3D.create[Id](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor), box, rCutOff)
       }
 
 
-      val energyError: Future[Double] = meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, Future](
-        particles,
-        box,
-        50,
-        `∆t` = 0.001
+      val energyError: Id[Double] = meanSquaredErrorOfTotalEnergy(
+        buildFrameLog(particles, box, `∆t` = 0.001),
+        40,
       )
 
-      energyError must be_<(1E-4).await(retries = 1, timeout = 120.seconds)
+      energyError must be_<(1E-4)
     }
   }
 }

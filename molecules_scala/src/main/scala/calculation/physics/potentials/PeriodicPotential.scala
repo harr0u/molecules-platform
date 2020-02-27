@@ -1,5 +1,6 @@
-package calculation.physics
-import calculation.limitConditions.SpaceConditions
+package calculation.physics.potentials
+
+import calculation.space.SpaceConditions
 import domain.Particle
 import domain.geometry.figures.GeometricFigure
 import domain.geometry.vector.AlgebraicVector

@@ -1,6 +1,6 @@
-package calculation.limitConditions.periodic
+package calculation.space.periodic
 
-import calculation.limitConditions.SpaceConditions
+import calculation.space.SpaceConditions
 import domain.geometry.figures.{Box, Cube, CubicFigure}
 import domain.geometry.vector.Vector3D
 

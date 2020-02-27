@@ -1,23 +1,31 @@
-package calculation.numerical
+package simulation.frameLog.decorators
 
-import calculation.physics.LennardJonesPotential
+import calculation.physics.potentials.PairwisePotentialCalculator
 import domain.Particle
-import domain.geometry.figures.GeometricFigure
-import domain.geometry.vector._
+import domain.geometry.vector.AlgebraicVector
 import simulation.actions._
-
+import simulation.frameLog.FrameLog
 
 // By the way, it looks strange: Leap From Integration algorithm + iterator pattern, can I cut off algo from progrmng?
-case class LeapFrogIteration[V <: AlgebraicVector[V], Fig <: GeometricFigure](`∆t`: Double = 0.0001)(implicit potentialCalculator: LennardJonesPotential[V]) extends TimeIntegrator[V] {
-  def init: Seq[ParticlesChangeAction[V]] = updateForcesAndPotentials
+trait LeapFrogIteration[V <: AlgebraicVector[V], F[_]] extends FrameLog[V, F] {
 
-  private val `∆t∆t`: Double = `∆t` * `∆t`
-  def iterationStep: Seq[ParticlesChangeAction[V]] = {
+  def `∆t`: Double = 0.0001
+  private lazy val `∆t∆t`: Double = `∆t` * `∆t`
+
+  def potentialCalculator: PairwisePotentialCalculator[V]
+
+
+  abstract override def initActions: Seq[ParticlesChangeAction[V]] = {
+    updateForcesAndPotentials ++: super.initActions
+  }
+
+  abstract override def nextActions: Seq[ParticlesChangeAction[V]] = {
     Seq.concat(
       Seq(UpdatePositions((p) => p.position + p.velocity * `∆t` + p.acceleration * (`∆t∆t` / 2))),
       this.halfUpdateVelocities,
       this.updateForcesAndPotentials,
-      this.halfUpdateVelocities
+      this.halfUpdateVelocities,
+      super.initActions
     )
   }
 

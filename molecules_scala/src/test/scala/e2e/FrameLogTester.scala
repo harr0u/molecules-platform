@@ -1,49 +1,46 @@
 package e2e
 
-import calculation.limitConditions.SpaceConditions
-import calculation.numerical.{FrameLog, LeapFrogIteration}
-import calculation.physics.{LennardJonesPotential, PotentialCalculator}
+import calculation.physics.potentials.PairwisePotentialCalculator
+import calculation.space.SpaceConditions
 import cats.{Functor, Monad, Traverse}
 import domain.Particle
 import domain.geometry.figures.{CubicFigure, GeometricFigure, RectangleFigure}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
-import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.FutureMatchers
 import simulation.ParticlesState
+import simulation.frameLog.{FrameLog, PeriodicLennardJonesFrameLog}
 import simulation.reducers.ParticlesStateReducer
 //import scala.concurrent.ExecutionContext.Implicits.global
+import cats.implicits._
 import org.specs2._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.Random
-import cats.implicits._
 
 
 trait FrameLogTester {
   this: mutable.Specification with FutureMatchers =>
 
-  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_]](
+  def buildFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Monad](
     particles: ParticlesState[V, F],
     box: SpaceConditions[V, Fig],
+    `∆t`: Double = 0.0001
+  )(implicit pc: PairwisePotentialCalculator[V]): FrameLog[V, F] = {
+    PeriodicLennardJonesFrameLog(particles, new ParticlesStateReducer[V, F], box, `∆t`)
+  }
+
+  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_]](
+    frameLog: FrameLog[V, F],
     numberOfFrames : Int,
-    `∆t`: Double = 0.001,
     verbose: Option[Int] = Some(100)
-  )(implicit ee: ExecutionEnv, potential: LennardJonesPotential[V], F : Monad[F], SeqForF : Traverse[List]): F[Double] = {
+  )(implicit F : Monad[F], SeqForF : Traverse[List]): F[Double] = {
 
-    val frameLog: FrameLog[V, Fig, F] = new FrameLog[V, Fig, F](
-      particles,
-      new ParticlesStateReducer[V, F],
-      box,
-      new LeapFrogIteration[V, Fig],
-      `∆t` = `∆t`
-    )
-
-    val particlesLog: List[F[FrameLog[V, Fig, F]]] = List.iterate(frameLog.init, numberOfFrames)(
+    val particlesLog: LazyList[F[FrameLog[V, F]]] = LazyList.iterate(frameLog.init, numberOfFrames)(
       iF => iF.flatMap(iteration => iteration.next)
     )
 
     val framesHistory: F[List[(Double, Long)]] = SeqForF.sequence(
-      buildTotalEnergyLog(particlesLog, verbose).take(numberOfFrames)
+      buildTotalEnergyLog(particlesLog, verbose).toList
     )
 
     framesHistory.map(framesEnergy => {
@@ -54,8 +51,7 @@ trait FrameLogTester {
     })
   }
 
-  def buildTotalEnergyLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Functor](moleculesLog: List[F[FrameLog[V, Fig, F]]], verbose: Option[Int] = None)
-                                                                        (implicit ec: ExecutionContext): List[F[(Double, Long)]] = {
+  def buildTotalEnergyLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Functor](moleculesLog: LazyList[F[FrameLog[V, F]]], verbose: Option[Int] = None): LazyList[F[(Double, Long)]] = {
     val log = (index: Int, energies: (Double, Double, Double)) => if (verbose.exists(x => index % x == 0)) {
       val (total, potential, kineticEnergy) = energies
       println(f"Frame ${index} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")
