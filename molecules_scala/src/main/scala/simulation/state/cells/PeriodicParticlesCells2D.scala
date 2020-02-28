@@ -1,10 +1,10 @@
 package state.state.cells
 
 import calculation.space.SpaceConditions
-import cats.{Monad, Traverse}
+import cats.{Monad, Parallel, Traverse}
 import domain.Particle
-import domain.geometry.figures.{RectangleFigure}
-import domain.geometry.vector.{Vector2D}
+import domain.geometry.figures.RectangleFigure
+import domain.geometry.vector.Vector2D
 import simulation.ParticlesState
 import state.state.cells.ParticlesCellsMetadata.Tuple2Same
 import state.state.cells.PeriodicParticleCells.{Cell, Cells}
@@ -16,7 +16,7 @@ case class PeriodicParticlesCells2D[F[_] : Monad](
                                                     cellsMetadata: ParticlesCells2DMetadata,
                                                     override val currentFlatCells: Cells[Vector2D],
                                                     minimumCellLength: Double = 5.0
-                                                  )(implicit SeqForF: Traverse[List]) extends PeriodicParticleCells[Vector2D, F, Tuple2Same] {
+                                                  )(implicit par : Parallel[F]) extends PeriodicParticleCells[Vector2D, F, Tuple2Same] {
 
   override def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector2D]] = {
     val (rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber
@@ -46,7 +46,7 @@ case class PeriodicParticlesCells2D[F[_] : Monad](
 
 object PeriodicParticlesCells2D {
   def create[F[_] : Monad](particles: Seq[Particle[Vector2D]], limitConditions: SpaceConditions[Vector2D, RectangleFigure], minimumCellLength: Double = 5.0)
-            (implicit SeqForF: Traverse[List]): PeriodicParticlesCells2D[F] = {
+                          (implicit par : Parallel[F]): PeriodicParticlesCells2D[F] = {
     val cellsMetadata = ParticlesCellMetadata.fromRectangleFigure(limitConditions.boundaries)
 
     PeriodicParticlesCells2D[F](limitConditions, cellsMetadata, makeFlatCells(cellsMetadata, particles), minimumCellLength)
@@ -67,7 +67,7 @@ object PeriodicParticlesCells2D {
         (for {
           i <- cellsMetadata.getFlatCellIndexByCoordinate((particle.position.x, particle.position.y))
         } yield (
-          accCells.updated(i, accCells(i).appended(particle))
+          accCells.updated(i, accCells(i) :+ particle)
           )).getOrElse(accCells)
       }
     )

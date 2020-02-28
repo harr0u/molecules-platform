@@ -1,5 +1,6 @@
 package calculation.space.periodic
 
+import calculation.physics.Utils
 import calculation.space.SpaceConditions
 import domain.geometry.figures.{Rectangle, RectangleFigure, Square}
 import domain.geometry.vector.Vector2D
@@ -18,7 +19,7 @@ case class RectanglePeriodicSpaceConditions(override val boundaries: RectangleFi
   override def getDistanceBetween(point: Vector2D, other: Vector2D): Vector2D = {
     val coordinateLimit = (coordinate: Double, length: Double) => {
       if (Math.abs(coordinate) > (length / 2)) {
-        -1 * coordinate.sign * (length - Math.abs(coordinate))
+        -1 * coordinate.signum * (length - Math.abs(coordinate))
       } else {
         coordinate
       }
@@ -37,5 +38,12 @@ case class RectanglePeriodicSpaceConditions(override val boundaries: RectangleFi
       case Rectangle(width, length) => applyLimit(width, length);
       case Square(width) => applyLimit(width, width)
     }
+  }
+}
+
+object RectanglePeriodicSpaceConditions {
+  def buildSquareBox(particlesSideNumber: Int, density: Double): Option[SpaceConditions[Vector2D, RectangleFigure]] = {
+    Utils.calculateWidthWithSideCount(particlesSideNumber, density)
+      .map(width => RectanglePeriodicSpaceConditions(Square(width)))
   }
 }

@@ -19,27 +19,7 @@ import scala.concurrent.Future
 import scala.util.Random
 
 
-trait FrameLogTester {
-  this: mutable.Specification with FutureMatchers =>
-
-  def buildSquareBox(particlesSideNumber: Int, density: Double): Option[SpaceConditions[Vector2D, RectangleFigure]] = {
-    calculateWidthWithSideCount(particlesSideNumber, density)
-      .map(width => RectanglePeriodicSpaceConditions(Square(width)))
-  }
-
-  def buildCubeBox(particlesSideNumber: Int, density: Double): Option[SpaceConditions[Vector3D, CubicFigure]] = {
-    calculateWidthWithSideCount(particlesSideNumber, density)
-      .map(width => BoxPeriodicSpaceConditions(Cube(width)))
-  }
-
-  protected def calculateWidthWithSideCount(particlesSideNumber: Int, density: Double): Option[Double] = {
-    if (density > 0.0 && particlesSideNumber > 0) {
-      Some(particlesSideNumber / density)
-    } else {
-      None
-    }
-  }
-
+object FrameLogTester {
   def buildFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Monad](
     particles: ParticlesState[V, F],
     box: SpaceConditions[V, Fig],
@@ -64,9 +44,9 @@ trait FrameLogTester {
 
     framesHistory.map(framesEnergy => {
       val energySeq: List[Double] = framesEnergy.map(_._1)
-      val average = energySeq.iterator.sum / numberOfFrames
+      val average = energySeq.sum / numberOfFrames
 
-      energySeq.map(e => Math.pow(e - average, 2)).iterator.sum / numberOfFrames
+      energySeq.map(e => Math.pow(e - average, 2)).sum / numberOfFrames
     })
   }
 
@@ -130,9 +110,7 @@ trait FrameLogTester {
 
     particlesSeq.toList
   }
-}
 
-object FrameLogTester {
   import scala.concurrent.ExecutionContext.Implicits.global;
 
   implicit val monadInstanceForFuture: Monad[Future] = new Monad[Future] {

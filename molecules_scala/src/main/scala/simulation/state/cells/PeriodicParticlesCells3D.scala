@@ -2,7 +2,7 @@ package state.state.cells
 
 import calculation.space.SpaceConditions
 import cats.implicits._
-import cats.{Monad, Traverse}
+import cats.{Monad, Parallel, Traverse}
 import domain.Particle
 import domain.geometry.figures.CubicFigure
 import domain.geometry.vector.Vector3D
@@ -16,7 +16,7 @@ case class PeriodicParticlesCells3D[F[_] : Monad](
                                            cellsMetadata: ParticlesCells3DMetadata,
                                            override val currentFlatCells: Cells[Vector3D],
                                            minimumCellLength: Double = 5.0
-)(implicit SeqForF: Traverse[List]) extends PeriodicParticleCells[Vector3D, F, Tuple3Same] {
+)(implicit par : Parallel[F]) extends PeriodicParticleCells[Vector3D, F, Tuple3Same] {
 
   override def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector3D]] = {
     val (layersNumber: Int, rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber
@@ -47,7 +47,7 @@ case class PeriodicParticlesCells3D[F[_] : Monad](
 
 object PeriodicParticlesCells3D {
   def create[F[_] : Monad](particles: Seq[Particle[Vector3D]], limitConditions: SpaceConditions[Vector3D, CubicFigure], minimumCellLength: Double = 5.0)
-                  (implicit SeqForF: Traverse[List]): PeriodicParticlesCells3D[F] = {
+                          (implicit par : Parallel[F]): PeriodicParticlesCells3D[F] = {
     val cellsMetadata = ParticlesCellMetadata.fromCubicFigure(limitConditions.boundaries)
 
     PeriodicParticlesCells3D[F](limitConditions, cellsMetadata, makeFlatCells(cellsMetadata, particles), minimumCellLength)
@@ -69,7 +69,7 @@ object PeriodicParticlesCells3D {
         (for {
           i <- cellsMetadata.getFlatCellIndexByCoordinate((particle.position.x, particle.position.y, particle.position.z))
         } yield (
-          accCells.updated(i, accCells(i).appended(particle))
+          accCells.updated(i, accCells(i) :+ particle)
           )).getOrElse(accCells)
       }
     )

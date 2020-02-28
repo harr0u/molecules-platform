@@ -1,5 +1,7 @@
 package calculation.space.periodic
 
+import java.lang
+
 import calculation.space.SpaceConditions
 import domain.geometry.figures.{Box, Cube, CubicFigure}
 import domain.geometry.vector.Vector3D
@@ -18,7 +20,7 @@ case class BoxPeriodicSpaceConditions(override val boundaries: CubicFigure) exte
   override def getDistanceBetween(point: Vector3D, other: Vector3D): Vector3D = {
     val coordinateLimit = (coordinate: Double, length: Double) => {
       if (Math.abs(coordinate) > (length / 2)) {
-        -1 * coordinate.sign * (length - Math.abs(coordinate))
+        -1 * lang.Math.signum(coordinate) * (length - Math.abs(coordinate))
       } else {
         coordinate
       }

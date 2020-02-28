@@ -12,6 +12,8 @@ import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
 import simulation.ParticlesState
 import simulation.frameLog.decorators.LeapFrogIteration
 import simulation.state.ParticlesListState
+import FrameLogTester._
+import calculation.physics.Utils
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -27,7 +29,7 @@ import org.specs2.specification.AllExpectations
 //    Periodic Cube (Square)
 //    No Reduce Optimization (ParticlesListState)
 //    Uniform distributed on the start
-class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
+class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers {
   def energyErrorOfValidation2DSimulation[M[_] : Monad](
     density: Double,
     particlesSideNumber: Int,
@@ -35,7 +37,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
     numberOfFrames: Int,
     `∆t`: Double = 0.0001): Option[M[Double]] = {
     for {
-      boxWidth <- calculateWidthWithSideCount(particlesSideNumber, density)
+      boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector2D, RectangleFigure] = RectanglePeriodicSpaceConditions(Square(boxWidth))
@@ -56,7 +58,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
                                                          numberOfFrames: Int,
                                                          `∆t`: Double = 0.0001): Option[M[Double]] = {
     for {
-      boxWidth <- calculateWidthWithSideCount(particlesSideNumber, density)
+      boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector3D, CubicFigure] = BoxPeriodicSpaceConditions(Cube(boxWidth))

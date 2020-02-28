@@ -1,10 +1,10 @@
 package e2e
 
+import calculation.physics.Utils
 import calculation.physics.potentials.{CutOffPotentialOptimization, LennardJonesPotential, PeriodicPotential}
 import calculation.space.SpaceConditions
 import calculation.space.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
-import cats.{Id, Monad}
-import domain.Particle
+import cats.{Id, Monad, Parallel}
 import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
 import e2e.FrameLogTester._
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
@@ -22,22 +22,20 @@ import org.specs2._
 import org.specs2.specification.AllExpectations
 import cats.implicits._
 
-class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers with FrameLogTester {
-  sequential
-
+class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers {
   def energyErrorOfCells2DSimulation[M[_] : Monad](
                                                          density: Double,
                                                          particlesSideNumber: Int,
                                                          velocityFactor: Double,
                                                          numberOfFrames: Int,
                                                          `∆t`: Double = 0.0001,
-                                                         rCutOff: Double = 5.0): Option[M[Double]] = {
+                                                         rCutOff: Double = 5.0)(implicit P: Parallel[M]): Option[M[Double]] = {
     for {
-      boxWidth <- calculateWidthWithSideCount(particlesSideNumber, density)
+      boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector2D, RectangleFigure] = RectanglePeriodicSpaceConditions(Square(boxWidth))
-      val particlesState: ParticlesState[Vector2D, M] = PeriodicParticlesCells2D.create(
+      val particlesState: ParticlesState[Vector2D, M] = PeriodicParticlesCells2D.create[M](
         makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor),
         box,
         rCutOff
@@ -57,13 +55,13 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
                                                          velocityFactor: Double,
                                                          numberOfFrames: Int,
                                                          `∆t`: Double = 0.0001,
-                                                         rCutOff: Double = 5.0): Option[M[Double]] = {
+                                                         rCutOff: Double = 5.0)(implicit par : Parallel[M]): Option[M[Double]] = {
     for {
-      boxWidth <- calculateWidthWithSideCount(particlesSideNumber, density)
+      boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector3D, CubicFigure] = BoxPeriodicSpaceConditions(Cube(boxWidth))
-      val particlesState: ParticlesState[Vector3D, M] = PeriodicParticlesCells3D.create(
+      val particlesState: ParticlesState[Vector3D, M] = PeriodicParticlesCells3D.create[M](
         makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor),
         box,
         rCutOff
@@ -124,6 +122,33 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
       )
 
       energyError must beSome((err: Double) => err < 1E-5)
+    }
+
+    "Save total energy when 100*100=10000 molecules are presented with density=0.65" >> {
+      val energyError: Option[Double] = energyErrorOfCells2DSimulation[Id](
+        0.65,
+        100,
+        1.24,
+        250,
+        0.001
+      )
+
+      energyError must beSome((err: Double) => err < 1E-5)
+    }
+  }
+
+
+  "2D - Parallel" >> {
+    "Save total energy when 1 molecule is presented" >> {
+      val energyError: Option[Double] = energyErrorOfCells2DSimulation[Id](
+        0.05,
+        1,
+        6.66,
+        1000,
+        0.001
+      )
+
+      energyError must beSome((err: Double) => err < 1E-10)
     }
   }
 
