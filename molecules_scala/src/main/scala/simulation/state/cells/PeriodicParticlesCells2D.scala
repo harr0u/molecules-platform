@@ -21,17 +21,18 @@ case class PeriodicParticlesCells2D[F[_] : Monad](
   override def getAdjacentCells(flatIndex: Int): Seq[Cell[Vector2D]] = {
     val (rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber
 
-    cellsMetadata.flatIndex2Indexes(flatIndex).map {
-      case (rowIndex, cellIndex) =>
-        for (deltaR <- -1 to 1; deltaC <- -1 to 1) yield {
-          cellsMetadata.indexes2FlatIndex(
-            getPeriodicAdjIndex(rowIndex + deltaR, rowsNumber),
-            getPeriodicAdjIndex(cellIndex + deltaC, cellsNumber)
-          )
-            .map(flatIndex => this.currentFlatCells.applyOrElse[Int, Cell[Vector2D]](flatIndex, (_) => Seq()))
-            .getOrElse(Seq())
-        }
-    }
+    cellsMetadata.flatIndex2Indexes(flatIndex)
+      .map {
+        case (rowIndex, cellIndex) =>
+          for (deltaR <- -1 to 1; deltaC <- -1 to 1) yield {
+            cellsMetadata.indexes2FlatIndex(
+              getPeriodicAdjIndex(rowIndex + deltaR, rowsNumber),
+              getPeriodicAdjIndex(cellIndex + deltaC, cellsNumber)
+            )
+              .map(flatIndex => this.currentFlatCells.applyOrElse[Int, Cell[Vector2D]](flatIndex, (_) => Seq()))
+              .getOrElse(Seq())
+          }
+      }
       .getOrElse(Seq())
   }
 
@@ -62,15 +63,14 @@ object PeriodicParticlesCells2D {
   }
 
   def makeFlatCells(cellsMetadata: ParticlesCells2DMetadata, particles: Seq[Particle[Vector2D]]): Cells[Vector2D] = {
-    particles.foldLeft(makeEmptyFlatCells(cellsMetadata))(
-      (accCells: Cells[Vector2D], particle: Particle[Vector2D]) => {
-        (for {
-          i <- cellsMetadata.getFlatCellIndexByCoordinate((particle.position.x, particle.position.y))
-        } yield (
-          accCells.updated(i, accCells(i) :+ particle)
-          )).getOrElse(accCells)
-      }
-    )
+    particles
+      .foldLeft(makeEmptyFlatCells(cellsMetadata))(
+        (accCells: Cells[Vector2D], particle: Particle[Vector2D]) => {
+          cellsMetadata.getFlatCellIndexByCoordinate((particle.position.x, particle.position.y))
+            .map(i => accCells.updated(i, accCells(i) :+ particle))
+            .getOrElse(accCells)
+        }
+      )
   }
 }
 
