@@ -5,39 +5,44 @@ import cats.implicits._
 import domain.Particle
 import domain.geometry.vector.{AlgebraicVector, Vector3D}
 import simulation.ParticlesState
-import state.state.cells.PeriodicParticleCells.{Cell, Cells}
+import state.state.cells.PeriodicParticleCells.{Cell, Cells, SeqSeq}
 
 import scala.collection.immutable.Seq
 
 case class EscapedParticle[V <: AlgebraicVector[V]](particle: Particle[V], newCellIndex: Int)
 
-abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_] : Monad, Tuple[_]](implicit par : Parallel[F]) extends ParticlesState[V, F] {
+abstract class PeriodicParticleCells[V <: AlgebraicVector[V], Context[_] : Monad, Tuple[_]](implicit par : Parallel[Context])
+  extends ParticlesState[V, Context, SeqSeq] {
   def cellsMetadata: ParticlesCellsMetadata[Tuple]
+
   def currentFlatCells: Cells[V]
+
   def getAdjacentCells(flatIndex: Int): Seq[Cell[V]]
+
   def getFlatCellIndexOfParticle(particle: Particle[V]): Option[Int]
-  def updateWithFlatCells(currentFlatCells: Cells[V]): PeriodicParticleCells[V, F, Tuple]
 
-  val F: Monad[F] = implicitly[Monad[F]]
+  def updateWithFlatCells(currentFlatCells: Cells[V]): PeriodicParticleCells[V, Context, Tuple]
 
-  override def getParticles: List[Particle[V]] = currentFlatCells.reduce(_ ++ _).toList
+  val Context: Monad[Context] = implicitly[Monad[Context]]
 
-  override def map(mapFn: Particle[V] => Particle[V]): F[ParticlesState[V, F]] = {
+  override def getParticles: SeqSeq[Particle[V]] = currentFlatCells
+
+  override def mapParticles(mapFn: Particle[V] => Particle[V]): Context[ParticlesState[V, Context, SeqSeq]] = {
     mapWithIndex(mapCellWithIndex(_, _, mapFn), sewMappedCellsIntoFlatCells)
   }
 
-  override def reduce(reduceFn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]] = {
-    mapWithIndex[Cell[V]](reduceCellWithIndex(_, _, reduceFn), identity)
+  override def mapParticlesPairs(mapFn: (Particle[V], ParticlesState[V, Context, SeqSeq]) => Particle[V]): Context[ParticlesState[V, Context, SeqSeq]] = {
+
   }
 
-  protected def mapWithIndex[T](mapiCellFn: (Cell[V], Int) => F[T], beforeUpdate: List[T] => Cells[V]): F[ParticlesState[V, F]] = {
+  protected def mapWithIndex[T](mapiCellFn: (Cell[V], Int) => Context[T], beforeUpdate: List[T] => Cells[V]): Context[ParticlesState[V, Context, SeqSeq]] = {
     currentFlatCells.zipWithIndex.toList
       .parTraverse({ case (cell, index) => mapiCellFn(cell, index) })
       .map(beforeUpdate andThen this.updateWithFlatCells)
   }
 
-  protected def mapCellWithIndex(cell: Cell[V], index: Int, mapFn: (Particle[V]) => Particle[V]): F[(Cell[V], Seq[EscapedParticle[V]])] = {
-    F.pure {
+  protected def mapCellWithIndex(cell: Cell[V], index: Int, mapFn: (Particle[V]) => Particle[V]): Context[(Cell[V], Seq[EscapedParticle[V]])] = {
+    Context.pure {
       cell.foldLeft((Cell[V](), Seq[EscapedParticle[V]]()))((acc, particle) => {
         val (rest, left) = acc
 
@@ -68,8 +73,8 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_] : Monad, Tupl
     )
   }
 
-  protected def reduceCellWithIndex(cell: Cell[V], index: Int, reduceFn: (Particle[V], Particle[V]) => (Particle[V])): F[Cell[V]] = {
-    F.pure {
+  protected def reduceCellWithIndex(cell: Cell[V], index: Int, reduceFn: (Particle[V], Particle[V]) => (Particle[V])): Context[Cell[V]] = {
+    Context.pure {
       val cellsInvolvedInComputation: Seq[Cell[V]] = getAdjacentCells(index)
 
       for ((particle) <- cell) yield {
@@ -89,6 +94,7 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], F[_] : Monad, Tupl
 }
 
 object PeriodicParticleCells {
+  type SeqSeq[T] = Seq[Seq[T]]
   type Cell[V <: AlgebraicVector[V]] = Seq[Particle[V]]
   def Cell[V <: AlgebraicVector[V]](): Cell[V] = Seq[Particle[V]]()
 

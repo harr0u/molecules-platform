@@ -3,7 +3,7 @@ package simulation
 import cats.{Monad, Parallel}
 import cats.implicits._
 import domain.Particle
-import domain.geometry.vector._
+import domain.geometry.vector.{AlgebraicVector, _}
 import molecules.Utils._
 
 // TODO? Do I really need this trait and my specific abstraction over the molecules state
@@ -13,33 +13,29 @@ import molecules.Utils._
 //      map2 :: (Particle, Particle) => (Particle, Particle) //// assuming state knows map2 should be called on every
 //                                                           //// unique pair of Particles
 
-// So it is abstraction over List, that could be much more complicated than flat list
+// So it is abstraction over T, that could be much more complicated than T
 // And should implement map, fold, map2 and other useful things
-abstract class ParticlesState[V <: AlgebraicVector[V], F[_] : Monad]{
-    val F: Monad[F] = implicitly[Monad[F]]
+abstract class ParticlesState[V <: AlgebraicVector[V], Context[_] : Monad, T[_]]{
+  type State = ParticlesState[V, Context, T]
 
-    def getParticles: List[Particle[V]]
-    def updateWithParticles(particles: Seq[Particle[V]]): F[ParticlesState[V, F]]
+  def getParticles: T[Particle[V]]
 
-    def mapParticles(mapFn: (Particle[V]) => Particle[V]): F[ParticlesState[V, F]] = {
-      this map mapFn flatMap updateWithParticles
-    }
+  def map[B](f: Particle[V] => B): Context[T[B]]
 
-    def mapParticlesPairs(mapFn: Particle[V] => ParticlesState[V, F] => Particle[V]): F[ParticlesState[V, F]] = {
-      val liftedMapFn: Particle[V] => ParticlesState[V, F] => F[Particle[V]] = (p) => (s) => F.pure(mapFn(p)(s))
-      val getRestParticles = (_: Particle[V]) => F.pure(this)
+  def mapWithState[B](makeState: Particle[V] => Context[State])
+                     (mapFn: Particle[V] => State => Context[B]): Context[T[B]]
 
-      mapWithState(getRestParticles)(liftedMapFn) flatMap updateWithParticles
-    }
+  def updateWithParticles(particles: T[Particle[V]]): Context[State]
 
-    def map[B](f: Particle[V] => B): F[List[B]] = {
-      getParticles
-        .parTraverse(p => F.pure(f(p)))
-    }
+  def mapParticles(mapFn: (Particle[V]) => Particle[V]): Context[State] = {
+    this.map(mapFn)
+      .flatMap(updateWithParticles)
+  }
 
-    def mapWithState[B](makeState: Particle[V] => F[ParticlesState[V, F]])
-                       (mapFn: Particle[V] => ParticlesState[V, F] => F[B]): F[List[B]] = {
-      getParticles
-        .parTraverse(particle => makeState(particle).flatMap(mapFn(particle)))
-    }
+  def mapParticlesPairs(mapFn: (Particle[V], State) => Particle[V]): Context[State] = {
+    mapWithState(_ => Context.pure(this))(p => s => Context.pure(mapFn(p, s)))
+      .flatMap(updateWithParticles)
+  }
+
+  private val Context: Monad[Context] = implicitly[Monad[Context]]
 }

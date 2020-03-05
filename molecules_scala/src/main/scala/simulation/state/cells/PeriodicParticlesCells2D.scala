@@ -7,7 +7,7 @@ import domain.geometry.figures.RectangleFigure
 import domain.geometry.vector.Vector2D
 import simulation.ParticlesState
 import state.state.cells.ParticlesCellsMetadata.Tuple2Same
-import state.state.cells.PeriodicParticleCells.{Cell, Cells}
+import state.state.cells.PeriodicParticleCells.{Cell, Cells, SeqSeq}
 
 import scala.collection.immutable.Seq
 
