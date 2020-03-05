@@ -1,6 +1,6 @@
 package state.state.cells
 
-import cats.{Monad, Parallel, Traverse}
+import cats.{Comonad, Monad, Parallel, Traverse}
 import cats.implicits._
 import domain.Particle
 import domain.geometry.vector.{AlgebraicVector, Vector3D}

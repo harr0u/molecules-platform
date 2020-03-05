@@ -7,9 +7,11 @@ import simulation.frameLog.FrameLog
 
  trait CenterOfMassReferentialFrame[V <: AlgebraicVector[V], F[_]] extends FrameLog[V, F] {
   override abstract def initActions: Seq[ParticlesChangeAction[V]] = {
-    CenterOfMassCalculator.findCenterMassVelocity[V, F](particles)
+    val cmAction = CenterOfMassCalculator
+      .findCenterMassVelocity[V, F](particles)
       .map(cmVelocity => UpdateVelocities[V](p => p.velocity - cmVelocity))
-      .map(act => act +: super.initActions)
-      .getOrElse(super.initActions)
+      .toSeq
+
+    cmAction ++: super.initActions
   }
 }

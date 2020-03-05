@@ -1,10 +1,10 @@
 package simulation
 
-import cats.Monad
+import cats.{Monad, Parallel}
 import cats.implicits._
 import domain.Particle
 import domain.geometry.vector._
-
+import molecules.Utils._
 
 // TODO? Do I really need this trait and my specific abstraction over the molecules state
 // what exactly should state class do?
@@ -15,13 +15,31 @@ import domain.geometry.vector._
 
 // So it is abstraction over List, that could be much more complicated than flat list
 // And should implement map, fold, map2 and other useful things
-trait ParticlesState[V <: AlgebraicVector[V], F[_]] {
-    def map(fn: (Particle[V]) => Particle[V]): F[ParticlesState[V, F]]
+abstract class ParticlesState[V <: AlgebraicVector[V], F[_] : Monad]{
+    val F: Monad[F] = implicitly[Monad[F]]
 
     def getParticles: List[Particle[V]]
+    def updateWithParticles(particles: Seq[Particle[V]]): F[ParticlesState[V, F]]
 
-    // Result particle should be (updated first particle) <--with<-- (second particle) - !!dumb
-    def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]]
-    // def map2(f: (Particle[V], Particle[V]) => (Particle[V], Particle[V])
-    // TODO? abstract method ~map~ oslt to give reducer access to inner particles
+    def mapParticles(mapFn: (Particle[V]) => Particle[V]): F[ParticlesState[V, F]] = {
+      this map mapFn flatMap updateWithParticles
+    }
+
+    def mapParticlesPairs(mapFn: Particle[V] => ParticlesState[V, F] => Particle[V]): F[ParticlesState[V, F]] = {
+      val liftedMapFn: Particle[V] => ParticlesState[V, F] => F[Particle[V]] = (p) => (s) => F.pure(mapFn(p)(s))
+      val getRestParticles = (_: Particle[V]) => F.pure(this)
+
+      mapWithState(getRestParticles)(liftedMapFn) flatMap updateWithParticles
+    }
+
+    def map[B](f: Particle[V] => B): F[List[B]] = {
+      getParticles
+        .parTraverse(p => F.pure(f(p)))
+    }
+
+    def mapWithState[B](makeState: Particle[V] => F[ParticlesState[V, F]])
+                       (mapFn: Particle[V] => ParticlesState[V, F] => F[B]): F[List[B]] = {
+      getParticles
+        .parTraverse(particle => makeState(particle).flatMap(mapFn(particle)))
+    }
 }

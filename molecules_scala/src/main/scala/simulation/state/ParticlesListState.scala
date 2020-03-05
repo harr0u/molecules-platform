@@ -1,11 +1,12 @@
 package simulation.state
 
 import cats.{Applicative, Traverse}
+import cats.implicits._
 import domain.Particle
 import domain.geometry.vector.AlgebraicVector
 import simulation.ParticlesState
+import molecules.Utils._
 
-import scala.concurrent.Future
 
 case class ParticlesListState[V <: AlgebraicVector[V], F[_]](
   particles: List[Particle[V]]
@@ -13,18 +14,18 @@ case class ParticlesListState[V <: AlgebraicVector[V], F[_]](
 
   override def getParticles: List[Particle[V]] = particles
 
-  override def map(fn: Particle[V] => Particle[V]): F[ParticlesState[V, F]] = F.pure(ParticlesListState[V, F](particles.map(fn)))
-
   override def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): F[ParticlesState[V, F]] = {
-    val newParticlesF: F[List[Particle[V]]] = SeqForF.sequence(particles.zipWithIndex.map {
-      case (particle, i) => F.pure {
-        particles.zipWithIndex.foldLeft(particle)((accParticle, pi) => {
-          val (secondParticle, j) = pi
-
-          if (i != j) fn(accParticle, secondParticle) else accParticle
-        })
+    val reduceWithoutCollision = (accParticle: Particle[V], otherParticle: Particle[V]) => {
+      if (accParticle.id != otherParticle.id) {
+        fn(accParticle, otherParticle)
+      } else {
+        accParticle
       }
-    })
-    F.map(newParticlesF)((newParticles: List[Particle[V]]) => this.copy(particles = newParticles))
+    }
+
+    particles
+      .map(p => particles.foldLeft(p)(reduceWithoutCollision) |> F.pure[Particle[V]])
+      .sequence
+      .map((newParticles: List[Particle[V]]) => this.copy(particles = newParticles))
   }
 }
