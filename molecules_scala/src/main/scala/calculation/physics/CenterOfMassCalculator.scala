@@ -1,11 +1,12 @@
 package calculation.physics
 
+import cats.Traverse
 import domain.Particle
 import domain.geometry.vector.AlgebraicVector
 import simulation.ParticlesState
 
 object CenterOfMassCalculator {
-  def findCenterMassVelocity[V <: AlgebraicVector[V], F[_]](state: ParticlesState[V, F]): Option[V] = {
+  def findCenterMassVelocity[V <: AlgebraicVector[V], Context[_], T[_]](state: ParticlesState[V, Context, T]): Option[V] = {
     state.getParticles.foldLeft[Option[(V, Double)]](None)((acc : Option[(V, Double)], p: Particle[V]) => {
       val (momentumAcc, massAcc) = acc.getOrElse((p.velocity.zero, 0.0))
 
@@ -13,7 +14,7 @@ object CenterOfMassCalculator {
     }).flatMap(CenterOfMassCalculator.divideVectorAccByMassOption)
   }
 
-  def findCenterMassPosition[V <: AlgebraicVector[V], F[_]](state: ParticlesState[V, F]): Option[V] = {
+  def findCenterMassPosition[V <: AlgebraicVector[V], Context[_], T[_]](state: ParticlesState[V, Context, T]): Option[V] = {
     state.getParticles.foldLeft[Option[(V, Double)]](None)((acc : Option[(V, Double)], p: Particle[V]) => {
       val (massPositionAcc, massAcc) = acc.getOrElse((p.velocity.zero, 0.0))
 

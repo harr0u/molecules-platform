@@ -1,12 +1,13 @@
 package simulation.frameLog.decorators
 
 import calculation.space.SpaceConditions
+import cats.Traverse
 import domain.geometry.figures.GeometricFigure
 import domain.geometry.vector.AlgebraicVector
 import simulation.actions.{ParticlesChangeAction, UpdatePositions}
 import simulation.frameLog.FrameLog
 
-trait SpaceLimitConditions[V <: AlgebraicVector[V], Fig <: GeometricFigure, M[_]] extends FrameLog[V, M] {
+trait SpaceLimitConditions[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_], T[_]] extends FrameLog[V, Context, T] {
   def spaceConditions: SpaceConditions[V, Fig]
 
   abstract override def initActions: Seq[ParticlesChangeAction[V]] = {

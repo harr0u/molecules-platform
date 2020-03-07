@@ -7,14 +7,14 @@ import org.specs2.fp.Id
 import simulation.ParticlesState
 import simulation.actions.UpdatePositions
 import simulation.reducers.ParticlesStateReducer
-//import scala.concurrent.ExecutionContext.Implicits.global
+import cats.implicits._
 import org.specs2._
 
 class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Specification {
   "Should apply Actions consistently" >> {
     "position.x: 10 |> (+1) |> (*2) = 22" >> {
-      val reducer = new ParticlesStateReducer[Vector2D, Id]()
-      val state = SingleParticleState[Vector2D](Particle(0, Vector2D(10, 12), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
+      val reducer = new ParticlesStateReducer[Vector2D, Id, Id]()
+      val state: ParticlesState[Vector2D, Id, Id] = SingleParticleState[Vector2D](Particle(0, Vector2D(10, 12), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
 
       val newState = reducer.applyChangeActions(state)(List(
         UpdatePositions(p => p.position + Vector2D(1, 1)),
@@ -27,8 +27,8 @@ class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Speci
     }
 
     "force.x: -5 |> (abs) |> (-5) = 0" >> {
-      val reducer = new ParticlesStateReducer[Vector2D, Id]()
-      val state = SingleParticleState[Vector2D](Particle(0, Vector2D(-5, -5), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
+      val reducer = new ParticlesStateReducer[Vector2D, Id, Id]()
+      val state: ParticlesState[Vector2D, Id, Id] = SingleParticleState[Vector2D](Particle(0, Vector2D(-5, -5), Vector2D.empty, Vector2D.empty, 0.0, 1.0))
 
       val newState = reducer.applyChangeActions(state)(List(
        UpdatePositions(p => p.position.mapCoordinates(Math.abs)),
@@ -41,10 +41,10 @@ class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Speci
   }
 }
 
-case class SingleParticleState[V <: AlgebraicVector[V]](p: Particle[V]) extends ParticlesState[V, Id] {
-  override def getParticles: List[Particle[V]] = List(p)
-  
-  override def map(fn: Particle[V] => Particle[V]): ParticlesState[V, Id] = SingleParticleState(fn(p))
+case class SingleParticleState[V <: AlgebraicVector[V]](particle: Particle[V]) extends ParticlesState[V, Id, Id] {
+  override def getParticles: Seq[Particle[V]] = Seq(particle)
 
-  override def reduce(fn: (Particle[V], Particle[V]) => Particle[V]): ParticlesState[V, Id] = this
+  override def counit: Particle[V] = particle
+
+  override def updateWithParticles(particles: Id[Particle[V]]): Id[ParticlesState[V, Id, Id]] = this.copy[V](particle = particles)
 }

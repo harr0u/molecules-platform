@@ -20,27 +20,25 @@ import scala.util.Random
 
 
 object FrameLogTester {
-  def buildFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Monad](
-    particles: ParticlesState[V, F],
+  def buildFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_] : Monad, T[_] : Traverse](
+    particles: ParticlesState[V, Context, T],
     box: SpaceConditions[V, Fig],
     `∆t`: Double = 0.0001
-  )(implicit pc: PairwisePotentialCalculator[V]): FrameLog[V, F] = {
-    PeriodicLennardJonesFrameLog(particles, new ParticlesStateReducer[V, F], box, `∆t`)
+  )(implicit pc: PairwisePotentialCalculator[V]): FrameLog[V, Context, T] = {
+    PeriodicLennardJonesFrameLog(particles, new ParticlesStateReducer[V, Context, T], box, `∆t`)
   }
 
-  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Monad](
-    frameLog: FrameLog[V, F],
+  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Context[_] : Monad, T[_] : Traverse](
+    frameLog: FrameLog[V, Context, T],
     numberOfFrames : Int,
     verbose: Option[Int] = Some(100)
-  )(implicit SeqForF : Traverse[List]): F[Double] = {
+  ): Context[Double] = {
 
-    val particlesLog: LazyList[F[FrameLog[V, F]]] = LazyList.iterate(frameLog.init, numberOfFrames)(
+    val particlesLog: LazyList[Context[FrameLog[V, Context, T]]] = LazyList.iterate(frameLog.init, numberOfFrames)(
       iF => iF.flatMap(iteration => iteration.next)
     )
 
-    val framesHistory: F[List[(Double, Long)]] = SeqForF.sequence(
-      buildTotalEnergyLog(particlesLog, verbose).toList
-    )
+    val framesHistory: Context[List[(Double, Long)]] = buildTotalEnergyLog(particlesLog, verbose).toList.sequence
 
     framesHistory.map(framesEnergy => {
       val energySeq: List[Double] = framesEnergy.map(_._1)
@@ -50,7 +48,12 @@ object FrameLogTester {
     })
   }
 
-  def buildTotalEnergyLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, F[_] : Functor](moleculesLog: LazyList[F[FrameLog[V, F]]], verbose: Option[Int] = None): LazyList[F[(Double, Long)]] = {
+  def buildTotalEnergyLog[
+    V <: AlgebraicVector[V],
+    Fig <: GeometricFigure,
+    Context[_] : Functor,
+    T[_] : Traverse
+  ](moleculesLog: LazyList[Context[FrameLog[V, Context, T]]], verbose: Option[Int] = None): LazyList[Context[(Double, Long)]] = {
     val log = (index: Int, energies: (Double, Double, Double)) => if (verbose.exists(x => index % x == 0)) {
       val (total, potential, kineticEnergy) = energies
       println(f"Frame ${index} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")

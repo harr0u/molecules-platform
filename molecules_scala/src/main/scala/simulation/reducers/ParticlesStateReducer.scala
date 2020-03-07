@@ -20,10 +20,6 @@ class ParticlesStateReducer[V <: AlgebraicVector[V], F[_], T[_] : Traverse] exte
 
   override def applyChangeActions(state: ParticlesState[V, F, T])(actions: Seq[ParticlesChangeAction[V]])
                                  (implicit F : Monad[F]): F[ParticlesState[V, F, T]] = {
-    // In case of empty list we should get F[State] type, maybe make method to zip State to F[State],
-    // Like unit for container of container
-    // Make F - F <: Functor?
-    // If it works, remove Futures and loose dependency from ParticlesState[V, Future] to ParticlesState[V, F, T]
     val squeezedActions: List[ParticlesChangeAction[V]] = actions.foldLeft(List[ParticlesChangeAction[V]]())((acc, act) => acc match {
       case ::(head, tail) => head match {
         case prevMap: ParticleActionMap[V] => act match {

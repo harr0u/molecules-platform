@@ -11,8 +11,9 @@ import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
 import simulation.ParticlesState
-import simulation.state.ParticlesListState
+import state.state.cells.PeriodicParticleCells.ListList
 import state.state.cells.{PeriodicParticlesCells2D, PeriodicParticlesCells3D}
+import state.state.cells.PeriodicParticleCells.ListListTraverse
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -23,52 +24,55 @@ import org.specs2.specification.AllExpectations
 import cats.implicits._
 
 class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers {
-  def energyErrorOfCells2DSimulation[M[_] : Monad](
+  def energyErrorOfCells2DSimulation[Context[_] : Monad](
                                                          density: Double,
                                                          particlesSideNumber: Int,
                                                          velocityFactor: Double,
                                                          numberOfFrames: Int,
                                                          `∆t`: Double = 0.0001,
-                                                         rCutOff: Double = 5.0)(implicit P: Parallel[M]): Option[M[Double]] = {
+                                                         rCutOff: Double = 5.0)(implicit P: Parallel[Context]): Option[Context[Double]] = {
     for {
       boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector2D, RectangleFigure] = RectanglePeriodicSpaceConditions(Square(boxWidth))
-      val particlesState: ParticlesState[Vector2D, M] = PeriodicParticlesCells2D.create[M](
-        makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor),
-        box,
-        rCutOff
-      )
+      val particlesState: ParticlesState[Vector2D, Context, ListList] = {
+        PeriodicParticlesCells2D.create[Context](
+          makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor),
+          box,
+          rCutOff
+        )
+      }
+
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = LennardJonesPotential.periodicCutOffPotential(box)(rCutOff)
 
-      meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, M](
+      meanSquaredErrorOfTotalEnergy(
         buildFrameLog(particlesState, box),
         numberOfFrames,
       )
     }
   }
 
-  def energyErrorOfCells3DSimulation[M[_] : Monad](
+  def energyErrorOfCells3DSimulation[Context[_] : Monad](
                                                          density: Double,
                                                          particlesSideNumber: Int,
                                                          velocityFactor: Double,
                                                          numberOfFrames: Int,
                                                          `∆t`: Double = 0.0001,
-                                                         rCutOff: Double = 5.0)(implicit par : Parallel[M]): Option[M[Double]] = {
+                                                         rCutOff: Double = 5.0)(implicit par : Parallel[Context]): Option[Context[Double]] = {
     for {
       boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector3D, CubicFigure] = BoxPeriodicSpaceConditions(Cube(boxWidth))
-      val particlesState: ParticlesState[Vector3D, M] = PeriodicParticlesCells3D.create[M](
+      val particlesState = PeriodicParticlesCells3D.create[Context](
         makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor),
         box,
         rCutOff
       )
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = LennardJonesPotential.periodicCutOffPotential(box)(rCutOff)
 
-      meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, M](
+      meanSquaredErrorOfTotalEnergy(
         buildFrameLog(particlesState, box),
         numberOfFrames,
       )
@@ -129,26 +133,11 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         0.65,
         100,
         1.24,
-        250,
+        500,
         0.001
       )
 
       energyError must beSome((err: Double) => err < 1E-5)
-    }
-  }
-
-
-  "2D - Parallel" >> {
-    "Save total energy when 1 molecule is presented" >> {
-      val energyError: Option[Double] = energyErrorOfCells2DSimulation[Id](
-        0.05,
-        1,
-        6.66,
-        1000,
-        0.001
-      )
-
-      energyError must beSome((err: Double) => err < 1E-10)
     }
   }
 
