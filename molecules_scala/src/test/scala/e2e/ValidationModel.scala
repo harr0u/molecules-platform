@@ -14,6 +14,7 @@ import simulation.frameLog.decorators.LeapFrogIteration
 import simulation.state.ParticlesListState
 import FrameLogTester._
 import calculation.physics.Utils
+import state.state.cells.PeriodicParticleCells.ListList
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,42 +31,42 @@ import org.specs2.specification.AllExpectations
 //    No Reduce Optimization (ParticlesListState)
 //    Uniform distributed on the start
 class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specification with FutureMatchers {
-  def energyErrorOfValidation2DSimulation[M[_] : Monad](
+  def energyErrorOfValidation2DSimulation[Context[_] : Monad](
     density: Double,
     particlesSideNumber: Int,
     velocityFactor: Double,
     numberOfFrames: Int,
-    `∆t`: Double = 0.0001): Option[M[Double]] = {
+    `∆t`: Double = 0.0001)(implicit P: Parallel[Context]): Option[Context[Double]] = {
     for {
       boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector2D, RectangleFigure] = RectanglePeriodicSpaceConditions(Square(boxWidth))
-      val particlesState: ParticlesState[Vector2D, M] = ParticlesListState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+      val particlesState = ParticlesListState[Vector2D, Context](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = LennardJonesPotential.periodicPotential(box)
 
-      meanSquaredErrorOfTotalEnergy[Vector2D, RectangleFigure, M](
+      meanSquaredErrorOfTotalEnergy(
         buildFrameLog(particlesState, box),
-        numberOfFrames,
+        numberOfFrames
       )
     }
   }
 
-  def energyErrorOfValidation3DSimulation[M[_] : Monad](
+  def energyErrorOfValidation3DSimulation[Context[_] : Monad](
                                                          density: Double,
                                                          particlesSideNumber: Int,
                                                          velocityFactor: Double,
                                                          numberOfFrames: Int,
-                                                         `∆t`: Double = 0.0001): Option[M[Double]] = {
+                                                         `∆t`: Double = 0.0001)(implicit P : Parallel[Context]): Option[Context[Double]] = {
     for {
       boxWidth <- Utils.calculateWidthWithSideCount(particlesSideNumber, density)
       if velocityFactor > 0.0 && numberOfFrames > 0
     } yield {
       val box: SpaceConditions[Vector3D, CubicFigure] = BoxPeriodicSpaceConditions(Cube(boxWidth))
-      val particlesState: ParticlesState[Vector3D, M] = ParticlesListState(makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
+      val particlesState = ParticlesListState[Vector3D, Context](makeParticlesIn(box.boundaries, particlesSideNumber, velocityFactor))
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = LennardJonesPotential.periodicPotential(box)
 
-      meanSquaredErrorOfTotalEnergy[Vector3D, CubicFigure, M](
+      meanSquaredErrorOfTotalEnergy(
         buildFrameLog(particlesState, box),
         numberOfFrames,
       )

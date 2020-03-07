@@ -8,6 +8,8 @@ sealed trait ParticlesChangeAction[V <: AlgebraicVector[V]]
 class ParticleActionMap[V <: AlgebraicVector[V]](val mapFn: Particle[V] => Particle[V])
   extends ParticlesChangeAction[V] {
 
+  // Looks like semigroup, moreover Wrapping return of mapFn will make
+  // ParticleActionMap ~>[F, P[V], P[V]]
   def andThen(thenMap: ParticleActionMap[V]): ParticleActionMap[V] = {
     new ParticleActionMap[V](p => thenMap.mapFn(this.mapFn(p)))
   }

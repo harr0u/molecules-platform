@@ -1,25 +1,25 @@
 package simulation.reducers
 
-import cats.{Applicative, Monad}
+import cats.{Monad, Traverse}
+import cats.implicits._
+import domain.Particle
 import domain.geometry.vector.AlgebraicVector
 import simulation.{ParticlesReducer, ParticlesState}
 import simulation.actions.{ParticleActionMap, ParticleActionReduce, ParticlesChangeAction}
 
-class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticlesReducer[V, F] {
+class ParticlesStateReducer[V <: AlgebraicVector[V], F[_], T[_] : Traverse] extends ParticlesReducer[V, F, T] {
 
-  override def applyChangeAction(state: ParticlesState[V, F])(action: ParticlesChangeAction[V]): F[ParticlesState[V, F]] = {
+  override def applyChangeAction(state: ParticlesState[V, F, T])(action: ParticlesChangeAction[V]): F[ParticlesState[V, F, T]] = {
     action match {
-      case map: ParticleActionMap[V] => state.map(map.mapFn)
-      case reduce: ParticleActionReduce[V] => state.reduce(reduce.reduceFn)
+      case map: ParticleActionMap[V] => state.mapParticles(map.mapFn)
+      case reduce: ParticleActionReduce[V] => state.mapParticlesPairs { (p: Particle[V], other: ParticlesState[V, F, T]) =>
+        other.getParticles.foldLeft(p)(reduce.reduceFn)
+      }
     }
   }
 
-  override def applyChangeActions(state: ParticlesState[V, F])(actions: Seq[ParticlesChangeAction[V]])
-                                 (implicit F : Monad[F]): F[ParticlesState[V, F]] = {
-    // In case of empty list we should get F[State] type, maybe make method to zip State to F[State],
-    // Like unit for container of container
-    // Make F - F <: Functor?
-    // If it works, remove Futures and loose dependency from ParticlesState[V, Future] to ParticlesState[V, F]
+  override def applyChangeActions(state: ParticlesState[V, F, T])(actions: Seq[ParticlesChangeAction[V]])
+                                 (implicit F : Monad[F]): F[ParticlesState[V, F, T]] = {
     val squeezedActions: List[ParticlesChangeAction[V]] = actions.foldLeft(List[ParticlesChangeAction[V]]())((acc, act) => acc match {
       case ::(head, tail) => head match {
         case prevMap: ParticleActionMap[V] => act match {
@@ -29,10 +29,10 @@ class ParticlesStateReducer[V <: AlgebraicVector[V], F[_]] extends ParticlesRedu
         case _ => act :: acc
       }
       case Nil => List(act)
-    } )
+    })
 
     squeezedActions.foldRight(F.pure(state))((action, newStateF) =>
-      F.flatMap(newStateF)((newState) => applyChangeAction(newState)(action))
+      newStateF.flatMap(applyChangeAction(_)(action))
     )
   }
 }

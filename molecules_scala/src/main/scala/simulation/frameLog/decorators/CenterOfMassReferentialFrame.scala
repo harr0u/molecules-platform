@@ -1,15 +1,18 @@
 package simulation.frameLog.decorators
 
 import calculation.physics.CenterOfMassCalculator
+import cats.Traverse
 import domain.geometry.vector.AlgebraicVector
 import simulation.actions.{ParticlesChangeAction, UpdateVelocities}
 import simulation.frameLog.FrameLog
 
- trait CenterOfMassReferentialFrame[V <: AlgebraicVector[V], F[_]] extends FrameLog[V, F] {
+ trait CenterOfMassReferentialFrame[V <: AlgebraicVector[V], Context[_], T[_]] extends FrameLog[V, Context, T] {
   override abstract def initActions: Seq[ParticlesChangeAction[V]] = {
-    CenterOfMassCalculator.findCenterMassVelocity[V, F](particles)
+    val cmAction = CenterOfMassCalculator
+      .findCenterMassVelocity[V, Context, T](particles)
       .map(cmVelocity => UpdateVelocities[V](p => p.velocity - cmVelocity))
-      .map(act => act +: super.initActions)
-      .getOrElse(super.initActions)
+      .toSeq
+
+    cmAction ++: super.initActions
   }
 }

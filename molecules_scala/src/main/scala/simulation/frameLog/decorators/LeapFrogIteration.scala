@@ -1,13 +1,14 @@
 package simulation.frameLog.decorators
 
 import calculation.physics.potentials.PairwisePotentialCalculator
+import cats.Traverse
 import domain.Particle
 import domain.geometry.vector.AlgebraicVector
 import simulation.actions._
 import simulation.frameLog.FrameLog
 
 // By the way, it looks strange: Leap From Integration algorithm + iterator pattern, can I cut off algo from progrmng?
-trait LeapFrogIteration[V <: AlgebraicVector[V], F[_]] extends FrameLog[V, F] {
+trait LeapFrogIteration[V <: AlgebraicVector[V], Context[_], T[_]] extends FrameLog[V, Context, T] {
 
   def `∆t`: Double = 0.0001
   private lazy val `∆t∆t`: Double = `∆t` * `∆t`

@@ -2,7 +2,7 @@ package simulation.frameLog
 
 import calculation.physics.potentials.PairwisePotentialCalculator
 import calculation.space.SpaceConditions
-import cats.Monad
+import cats.{Monad, Traverse}
 import domain.geometry.figures.GeometricFigure
 import domain.geometry.vector.AlgebraicVector
 import simulation.ParticlesState
@@ -10,17 +10,17 @@ import simulation.actions.ParticlesChangeAction
 import simulation.frameLog.decorators.{CenterOfMassReferentialFrame, LeapFrogIteration, SpaceLimitConditions}
 import simulation.reducers.ParticlesStateReducer
 
-case class PeriodicLennardJonesFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, M[_] : Monad](
-                                                                                                     override val particles: ParticlesState[V, M],
-                                                                                                     override val particlesReducer: ParticlesStateReducer[V, M],
+case class PeriodicLennardJonesFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_] : Monad, T[_]: Traverse](
+                                                                                                     override val particles: ParticlesState[V, Context, T],
+                                                                                                     override val particlesReducer: ParticlesStateReducer[V, Context, T],
                                                                                                      override val spaceConditions: SpaceConditions[V, Fig],
                                                                                                      override val `∆t`: Double = 0.0001
-                                                                                                   )(implicit pc: PairwisePotentialCalculator[V]) extends FrameLog[V, M]
-  with CenterOfMassReferentialFrame[V, M]
-  with LeapFrogIteration[V, M]
-  with SpaceLimitConditions[V, Fig, M] {
+                                                                                                   )(implicit pc: PairwisePotentialCalculator[V]) extends FrameLog[V, Context, T]
+  with CenterOfMassReferentialFrame[V, Context, T]
+  with LeapFrogIteration[V, Context, T]
+  with SpaceLimitConditions[V, Fig, Context, T] {
 
   override val potentialCalculator: PairwisePotentialCalculator[V] = pc
 
-  override def updateWithParticles(particles: ParticlesState[V, M]): FrameLog[V, M] = this.copy()
+  override def updateWithParticles(particles: ParticlesState[V, Context, T]): FrameLog[V, Context, T] = this.copy()
 }

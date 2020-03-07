@@ -1,26 +1,25 @@
 package simulation.frameLog
 
-import cats.{Functor, Monad}
+import cats.{Monad}
 import cats.implicits._
 import domain.geometry.vector._
 import simulation.actions.ParticlesChangeAction
 import simulation.{ParticlesReducer, ParticlesState}
 
 
-abstract class FrameLog[V <: AlgebraicVector[V], M[_] : Monad] {
+abstract class FrameLog[V <: AlgebraicVector[V], Context[_] : Monad, T[_]] {
+  final def init: Context[FrameLog[V, Context, T]] = updateParticlesWithActions(this.initActions)
+  final def next: Context[FrameLog[V, Context, T]] = updateParticlesWithActions(this.nextActions)
 
-  final def init: M[FrameLog[V, M]] = updateParticlesWithActions(this.initActions)
-  final def next: M[FrameLog[V, M]] = updateParticlesWithActions(this.nextActions)
+  def particles: ParticlesState[V, Context, T]
 
-  def initActions: Seq[ParticlesChangeAction[V]] = Seq.empty[ParticlesChangeAction[V]]
-  def nextActions: Seq[ParticlesChangeAction[V]] = Seq.empty[ParticlesChangeAction[V]]
+  protected def initActions: Seq[ParticlesChangeAction[V]] = Seq()
+  protected def nextActions: Seq[ParticlesChangeAction[V]] = Seq()
 
-  protected def updateWithParticles(particles: ParticlesState[V, M]): FrameLog[V, M]
+  protected def particlesReducer: ParticlesReducer[V, Context, T]
+  protected def updateWithParticles(particles: ParticlesState[V, Context, T]): FrameLog[V, Context, T]
 
-  def particles: ParticlesState[V, M]
-  def particlesReducer: ParticlesReducer[V, M]
-
-  protected def updateParticlesWithActions(actions: Seq[ParticlesChangeAction[V]]): M[FrameLog[V, M]] = {
+  protected def updateParticlesWithActions(actions: Seq[ParticlesChangeAction[V]]): Context[FrameLog[V, Context, T]] = {
     particlesReducer.applyChangeActions(particles)(actions)
       .map(newParticles => this.updateWithParticles(particles = newParticles))
   }
