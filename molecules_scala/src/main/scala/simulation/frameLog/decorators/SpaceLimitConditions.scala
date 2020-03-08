@@ -10,12 +10,12 @@ import simulation.frameLog.FrameLog
 trait SpaceLimitConditions[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_], T[_]] extends FrameLog[V, Context, T] {
   def spaceConditions: SpaceConditions[V, Fig]
 
-  abstract override def initActions: Seq[ParticlesChangeAction[V]] = {
-    spaceLimitConditionsAction +: super.initActions
+  abstract override def initActions: Context[Seq[ParticlesChangeAction[V]]] = {
+    Context.map(super.initActions)(spaceLimitConditionsAction +: _)
   }
 
-  abstract override def nextActions: Seq[ParticlesChangeAction[V]] = {
-    spaceLimitConditionsAction +: super.nextActions
+  abstract override def nextActions: Context[Seq[ParticlesChangeAction[V]]] = {
+    Context.map(super.nextActions)(spaceLimitConditionsAction +: _)
   }
 
   protected def spaceLimitConditionsAction: ParticlesChangeAction[V] = {
