@@ -23,7 +23,7 @@ abstract class ParticlesState[V <: AlgebraicVector[V], Context[_] : Monad, T[_] 
   def updateWithParticles(particles: T[Particle[V]]): Context[ParticlesState[V, Context, T]]
 
   def mapParticles(mapFn: (Particle[V]) => Particle[V]): Context[ParticlesState[V, Context, T]] = {
-    this.map(mapFn)
+    map(mapFn)
       .flatMap(updateWithParticles)
   }
 
