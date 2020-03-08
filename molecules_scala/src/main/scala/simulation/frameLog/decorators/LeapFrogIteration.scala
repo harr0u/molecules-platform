@@ -16,17 +16,19 @@ trait LeapFrogIteration[V <: AlgebraicVector[V], Context[_], T[_]] extends Frame
   def potentialCalculator: PairwisePotentialCalculator[V]
 
 
-  abstract override def initActions: Seq[ParticlesChangeAction[V]] = {
-    updateForcesAndPotentials ++: super.initActions
+  abstract override def initActions: Context[Seq[ParticlesChangeAction[V]]] = {
+    Context.map(super.initActions)(updateForcesAndPotentials ++: _)
   }
 
-  abstract override def nextActions: Seq[ParticlesChangeAction[V]] = {
-    Seq.concat(
-      Seq(UpdatePositions((p) => p.position + p.velocity * `∆t` + p.acceleration * (`∆t∆t` / 2))),
-      this.halfUpdateVelocities,
-      this.updateForcesAndPotentials,
-      this.halfUpdateVelocities,
-      super.initActions
+  abstract override def nextActions: Context[Seq[ParticlesChangeAction[V]]] = {
+    Context.map(super.initActions)(
+      Seq.concat(
+        Seq(UpdatePositions((p) => p.position + p.velocity * `∆t` + p.acceleration * (`∆t∆t` / 2))),
+        this.halfUpdateVelocities,
+        this.updateForcesAndPotentials,
+        this.halfUpdateVelocities,
+        _
+      )
     )
   }
 

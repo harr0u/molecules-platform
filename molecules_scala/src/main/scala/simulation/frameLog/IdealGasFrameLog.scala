@@ -5,24 +5,24 @@ import simulation.actions.ParticlesChangeAction
 import simulation.state.ParticlesListState
 import simulation.{ParticlesReducer, ParticlesState}
 
-case class IdealGasFrameLog[V <: AlgebraicVector[V], M[_] : Monad](
-                                                                    override val particles: ParticlesState[V, M, List],
-                                                                    override val particlesReducer: ParticlesReducer[V, M, List],
-                                                                  ) extends FrameLog[V, M, List] {
+case class IdealGasFrameLog[V <: AlgebraicVector[V], Context[_] : Monad](
+                                                                    override val particles: ParticlesState[V, Context, List],
+                                                                    override val particlesReducer: ParticlesReducer[V, Context, List],
+                                                                  ) extends FrameLog[V, Context, List] {
 
-  override protected def initActions: Seq[ParticlesChangeAction[V]] = makeNewParticlesAnsamble
+  override protected def initActions: Context[Seq[ParticlesChangeAction[V]]] = makeNewParticlesAnsamble
 
-  override def nextActions: Seq[ParticlesChangeAction[V]] = initActions
+  override def nextActions: Context[Seq[ParticlesChangeAction[V]]] = initActions
 
-  override protected def updateWithParticles(particles: ParticlesState[V, M, List]): FrameLog[V, M, List] = {
+  override protected def updateWithParticles(particles: ParticlesState[V, Context, List]): FrameLog[V, Context, List] = {
     this.copy(particles = particles)
   }
 
-  protected def makeNewParticlesAnsamble: Seq[ParticlesChangeAction[V]] = {
-    Seq.concat(
+  protected def makeNewParticlesAnsamble: Context[Seq[ParticlesChangeAction[V]]] = {
+    
+    Context.pure(Seq.concat(
       Seq(), // positions
       Seq(), // velocities
-    )
-    Seq()
+    ))
   }
 }
