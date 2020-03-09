@@ -7,7 +7,12 @@ import domain.geometry.vector.AlgebraicVector
 import simulation.actions.{ParticlesChangeAction, UpdateVelocities}
 import simulation.frameLog.FrameLog
 
- trait CenterOfMassReferentialFrame[V <: AlgebraicVector[V], Context[_], T[_]] extends FrameLog[V, Context, T] {
+trait CenterOfMassReferentialFrame[
+  V <: AlgebraicVector[V],
+  Context[_],
+  T[_],
+  FL <: FrameLog[V, Context, T, FL]
+] extends FrameLog[V, Context, T, FL] {
   override abstract def initActions: Context[Seq[ParticlesChangeAction[V]]] = {
     val cmAction = CenterOfMassCalculator
       .findCenterMassVelocity[V, Context, T](particles)

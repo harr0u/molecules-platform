@@ -7,7 +7,7 @@ import domain.geometry.figures.RectangleFigure
 import domain.geometry.vector.Vector2D
 import simulation.ParticlesState
 import state.state.cells.ParticlesCellsMetadata.Tuple2Same
-import state.state.cells.PeriodicParticleCells.ListList
+import state.state.cells.PeriodicParticlesCells.ListList
 
 import scala.collection.immutable.Seq
 
@@ -16,8 +16,7 @@ case class PeriodicParticlesCells2D[Context[_] : Monad](
                                                     cellsMetadata: ParticlesCells2DMetadata,
                                                     override val counit: List[List[Particle[Vector2D]]],
                                                     minimumCellLength: Double = 5.0
-                                                  )(implicit par : Parallel[Context]) extends PeriodicParticleCells[Vector2D, Context, Tuple2Same] {
-  override def getParticles: Seq[Particle[Vector2D]] = counit.flatten
+                                                  )(implicit par : Parallel[Context]) extends PeriodicParticlesCells[Vector2D, Context, Tuple2Same] {
 
   override def getAdjacentCells(flatIndex: Int): List[List[Particle[Vector2D]]] = {
     val (rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber

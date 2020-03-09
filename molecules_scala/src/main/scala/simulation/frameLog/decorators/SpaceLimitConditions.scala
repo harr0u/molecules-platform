@@ -7,7 +7,13 @@ import domain.geometry.vector.AlgebraicVector
 import simulation.actions.{ParticlesChangeAction, UpdatePositions}
 import simulation.frameLog.FrameLog
 
-trait SpaceLimitConditions[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_], T[_]] extends FrameLog[V, Context, T] {
+trait SpaceLimitConditions[
+  V <: AlgebraicVector[V],
+  Fig <: GeometricFigure,
+  Context[_],
+  T[_],
+  FL <: FrameLog[V, Context, T, FL]
+] extends FrameLog[V, Context, T, FL]  {
   def spaceConditions: SpaceConditions[V, Fig]
 
   abstract override def initActions: Context[Seq[ParticlesChangeAction[V]]] = {

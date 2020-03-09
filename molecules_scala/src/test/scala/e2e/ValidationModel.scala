@@ -14,7 +14,9 @@ import simulation.frameLog.decorators.LeapFrogIteration
 import simulation.state.ParticlesListState
 import FrameLogTester._
 import calculation.physics.Utils
-import state.state.cells.PeriodicParticleCells.ListList
+import simulation.frameLog.PeriodicLennardJonesFrameLog
+import simulation.reducers.ParticlesStateReducer
+import state.state.cells.PeriodicParticlesCells.ListList
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -46,7 +48,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = LennardJonesPotential.periodicPotential(box)
 
       meanSquaredErrorOfTotalEnergy(
-        buildFrameLog(particlesState, box),
+        buildPeriodicLJFrameLog(particlesState, box),
         numberOfFrames
       )
     }
@@ -67,7 +69,7 @@ class ValidationModelTest(implicit ee: ExecutionEnv) extends mutable.Specificati
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = LennardJonesPotential.periodicPotential(box)
 
       meanSquaredErrorOfTotalEnergy(
-        buildFrameLog(particlesState, box),
+        buildPeriodicLJFrameLog(particlesState, box, `∆t` = `∆t`),
         numberOfFrames,
       )
     }

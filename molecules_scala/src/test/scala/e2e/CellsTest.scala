@@ -11,9 +11,11 @@ import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.{FutureMatchers, MatchResult, Matcher}
 import simulation.ParticlesState
-import state.state.cells.PeriodicParticleCells.ListList
+import simulation.frameLog.PeriodicLennardJonesFrameLog
+import simulation.reducers.ParticlesStateReducer
+import state.state.cells.PeriodicParticlesCells.ListList
 import state.state.cells.{PeriodicParticlesCells2D, PeriodicParticlesCells3D}
-import state.state.cells.PeriodicParticleCells.ListListTraverse
+import state.state.cells.PeriodicParticlesCells.ListListTraverse
 
 import scala.concurrent.duration._
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -46,8 +48,8 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
 
       implicit val potentialCalculator: LennardJonesPotential[Vector2D] = LennardJonesPotential.periodicCutOffPotential(box)(rCutOff)
 
-      meanSquaredErrorOfTotalEnergy(
-        buildFrameLog(particlesState, box),
+      meanSquaredErrorOfTotalEnergy(//[Vector2D, Context, ListList, PeriodicLennardJonesFrameLog](
+        buildPeriodicLJFrameLog(particlesState, box),
         numberOfFrames,
       )
     }
@@ -70,10 +72,11 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         box,
         rCutOff
       )
+
       implicit val potentialCalculator: LennardJonesPotential[Vector3D] = LennardJonesPotential.periodicCutOffPotential(box)(rCutOff)
 
       meanSquaredErrorOfTotalEnergy(
-        buildFrameLog(particlesState, box),
+        buildPeriodicLJFrameLog(particlesState, box),
         numberOfFrames,
       )
     }
@@ -121,7 +124,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         0.6,
         50,
         1.24,
-        1000,
+        2000,
         0.001
       )
 
@@ -133,7 +136,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         0.65,
         100,
         1.24,
-        500,
+        2000,
         0.001
       )
 
@@ -160,7 +163,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         0.8,
         3,
         1.24,
-        500,
+        1000,
         0.001
       )
 
@@ -172,7 +175,7 @@ class CellsTest(implicit ee: ExecutionEnv) extends mutable.Specification with Fu
         0.8,
         10,
         1.24,
-        500,
+        1000,
         0.001
       )
 

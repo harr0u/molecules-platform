@@ -3,25 +3,28 @@ package state.state.cells
 import cats.{Applicative, Comonad, Eval, Monad, Parallel, Traverse}
 import cats.implicits._
 import domain.Particle
-import domain.geometry.vector.{AlgebraicVector, Vector3D}
+import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
 import simulation.ParticlesState
-import state.state.cells.PeriodicParticleCells.{ ListListTraverse, ListList}
+import state.state.cells.PeriodicParticlesCells.{ListList, ListListTraverse}
 import molecules.Utils._
 
 import scala.collection.immutable.Seq
 
 case class EscapedParticle[V <: AlgebraicVector[V]](particle: Particle[V], newCellIndex: Int)
 
-abstract class PeriodicParticleCells[V <: AlgebraicVector[V], Context[_] : Monad, Tuple[_]]
+abstract class PeriodicParticlesCells[V <: AlgebraicVector[V], Context[_] : Monad, Tuple[_]]
   (implicit P : Parallel[Context]) extends ParticlesState[V, Context, ListList] {
   def cellsMetadata: ParticlesCellsMetadata[Tuple]
+
+  // TODO: make iteration lazy as it was in python
+  override lazy val getParticles: List[Particle[V]] = counit.flatten
 
   def getAdjacentCells(flatIndex: Int): List[List[Particle[V]]]
 
   def getFlatCellIndexOfParticle(particle: Particle[V]): Option[Int]
 
   override def mapParticles(mapFn: Particle[V] => Particle[V]): Context[ParticlesState[V, Context, ListList]] = {
-    counit.zipWithIndex.toList
+    counit.zipWithIndex
       .parTraverse({ case (cell, index) => mapCellWithIndex(cell, index, mapFn) })
       .map(sewMappedCellsIntoFlatCells)
       .flatMap(updateWithParticles)
@@ -29,8 +32,8 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], Context[_] : Monad
 
 
   // DENGEROUS!!! There is no change position check for particles
-  override def mapParticlesPairs(mapFn: (Particle[V], ParticlesState[V, Context, ListList]) => Particle[V]): Context[ParticlesState[V, Context, ListList]] = {
-    counit.zipWithIndex.toList
+  override def mapParticlesWithState(mapFn: (Particle[V], ParticlesState[V, Context, ListList]) => Particle[V]): Context[ParticlesState[V, Context, ListList]] = {
+    counit.zipWithIndex
       .parTraverse({ case (cell, index) => updateWithParticles(getAdjacentCells(index))
         .map(state =>
           cell.map(particle => mapFn(particle, state)))})
@@ -75,7 +78,7 @@ abstract class PeriodicParticleCells[V <: AlgebraicVector[V], Context[_] : Monad
   }
 }
 
-object PeriodicParticleCells {
+object PeriodicParticlesCells {
   type ListList[T] = List[List[T]]
   type Cell[V <: AlgebraicVector[V]] = Seq[Particle[V]]
   def Cell[V <: AlgebraicVector[V]](): Seq[Particle[V]] = Seq[Particle[V]]()

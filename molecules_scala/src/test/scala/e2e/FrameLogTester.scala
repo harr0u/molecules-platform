@@ -2,43 +2,56 @@ package e2e
 
 import calculation.physics.potentials.PairwisePotentialCalculator
 import calculation.space.SpaceConditions
-import calculation.space.periodic.{BoxPeriodicSpaceConditions, RectanglePeriodicSpaceConditions}
 import cats.{Functor, Monad, Traverse}
 import domain.Particle
-import domain.geometry.figures.{Cube, CubicFigure, GeometricFigure, RectangleFigure, Square}
+import domain.geometry.figures.{CubicFigure, GeometricFigure, RectangleFigure}
 import domain.geometry.vector.{AlgebraicVector, Vector2D, Vector3D}
-import org.specs2.matcher.FutureMatchers
 import simulation.ParticlesState
 import simulation.frameLog.{FrameLog, PeriodicLennardJonesFrameLog}
 import simulation.reducers.ParticlesStateReducer
-//import scala.concurrent.ExecutionContext.Implicits.global
 import cats.implicits._
-import org.specs2._
 
-import scala.concurrent.Future
 import scala.util.Random
 
 
 object FrameLogTester {
-  def buildFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_] : Monad, T[_] : Traverse](
+  def buildPeriodicLJFrameLog[V <: AlgebraicVector[V], Fig <: GeometricFigure, Context[_] : Monad, T[_] : Traverse](
     particles: ParticlesState[V, Context, T],
     box: SpaceConditions[V, Fig],
     `∆t`: Double = 0.0001
-  )(implicit pc: PairwisePotentialCalculator[V]): FrameLog[V, Context, T] = {
+)(implicit pc: PairwisePotentialCalculator[V]): PeriodicLennardJonesFrameLog[V, Fig, Context, T] = {
     PeriodicLennardJonesFrameLog(particles, new ParticlesStateReducer[V, Context, T], box, `∆t`)
   }
 
-  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Context[_] : Monad, T[_] : Traverse](
-    frameLog: FrameLog[V, Context, T],
+  def meanSquaredErrorOfTotalEnergy[V <: AlgebraicVector[V], Context[_] : Monad, T[_] : Traverse, FL <: FrameLog[V, Context, T, FL]](
+    frameLog: FrameLog[V, Context, T, FL],
     numberOfFrames : Int,
     verbose: Option[Int] = Some(100)
   ): Context[Double] = {
 
-    val particlesLog: LazyList[Context[FrameLog[V, Context, T]]] = LazyList.iterate(frameLog.init, numberOfFrames)(
+    val particlesLog: LazyList[Context[FL]] = LazyList.iterate(frameLog.init, numberOfFrames)(
       iF => iF.flatMap(iteration => iteration.next)
     )
 
-    val framesHistory: Context[List[(Double, Long)]] = buildTotalEnergyLog(particlesLog, verbose).toList.sequence
+    val log = (index: Int, energies: (Double, Double, Double)) => if (verbose.exists(x => index % x == 0)) {
+      val (total, potential, kineticEnergy) = energies
+      println(f"Frame ${index} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")
+    }
+
+    val framesHistory: Context[List[(Double, Long)]] = particlesLog.zipWithIndex
+      .map {
+        case (iter, i: Int) => iter.map((iteration) => {
+          val numberOfParticles = iteration.particles.getParticles.length
+          val kineticEnergy: Double = iteration.particles.getParticles.map((p) => p.velocity.squaredLength / 2).iterator.sum / numberOfParticles
+          val potential: Double = iteration.particles.getParticles.map(_.potential).iterator.sum / numberOfParticles
+          val total: Double = kineticEnergy + potential
+
+          log(i, (total, potential, kineticEnergy))
+
+          (total, System.currentTimeMillis)
+        })
+      }
+      .toList.sequence
 
     framesHistory.map(framesEnergy => {
       val energySeq: List[Double] = framesEnergy.map(_._1)
@@ -46,31 +59,6 @@ object FrameLogTester {
 
       energySeq.map(e => Math.pow(e - average, 2)).sum / numberOfFrames
     })
-  }
-
-  def buildTotalEnergyLog[
-    V <: AlgebraicVector[V],
-    Fig <: GeometricFigure,
-    Context[_] : Functor,
-    T[_] : Traverse
-  ](moleculesLog: LazyList[Context[FrameLog[V, Context, T]]], verbose: Option[Int] = None): LazyList[Context[(Double, Long)]] = {
-    val log = (index: Int, energies: (Double, Double, Double)) => if (verbose.exists(x => index % x == 0)) {
-      val (total, potential, kineticEnergy) = energies
-      println(f"Frame ${index} - T[${total}] - P[${potential}] - K[${kineticEnergy}]")
-    }
-
-    moleculesLog.zipWithIndex.map {
-      case (iter, i: Int) => iter.map((iteration) => {
-        val numberOfParticles = iteration.particles.getParticles.length
-        val kineticEnergy: Double = iteration.particles.getParticles.map((p) => p.velocity.squaredLength / 2).iterator.sum / numberOfParticles
-        val potential: Double = iteration.particles.getParticles.map(_.potential).iterator.sum / numberOfParticles
-        val total: Double = kineticEnergy + potential
-
-        log(i, (total, potential, kineticEnergy))
-
-        (total, System.currentTimeMillis)
-      })
-    }
   }
 
   def makeParticlesIn(box: CubicFigure, sideNumber: Int, velocityFactor: Double): List[Particle[Vector3D]] = {
@@ -112,24 +100,5 @@ object FrameLogTester {
     }
 
     particlesSeq.toList
-  }
-
-  import scala.concurrent.ExecutionContext.Implicits.global;
-
-  implicit val monadInstanceForFuture: Monad[Future] = new Monad[Future] {
-    override def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.flatMap(a => pure(f(a)))
-
-    override def pure[A](x: A): Future[A] = Future.successful(x)
-
-    override def flatMap[A, B](fa: Future[A])(f: A => Future[B]): Future[B] = fa flatMap f
-
-    override def tailRecM[A, B](a: A)(f: A => Future[Either[A, B]]): Future[B] = {
-      pure(a)
-        .flatMap(f)
-        .flatMap {
-          case Left(v) => tailRecM(v)(f)
-          case Right(b) => Future.successful(b)
-        }
-    }
   }
 }

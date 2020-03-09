@@ -8,8 +8,12 @@ import simulation.actions._
 import simulation.frameLog.FrameLog
 
 // By the way, it looks strange: Leap From Integration algorithm + iterator pattern, can I cut off algo from progrmng?
-trait LeapFrogIteration[V <: AlgebraicVector[V], Context[_], T[_]] extends FrameLog[V, Context, T] {
-
+trait LeapFrogIteration[
+  V <: AlgebraicVector[V],
+  Context[_],
+  T[_],
+  FL <: FrameLog[V, Context, T, FL]
+] extends FrameLog[V, Context, T, FL] {
   def `∆t`: Double = 0.0001
   private lazy val `∆t∆t`: Double = `∆t` * `∆t`
 

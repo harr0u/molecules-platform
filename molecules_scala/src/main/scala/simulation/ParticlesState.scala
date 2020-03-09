@@ -17,7 +17,7 @@ import molecules.Utils._
 // And should implement map, fold, map2 and other useful things
 abstract class ParticlesState[V <: AlgebraicVector[V], Context[_] : Monad, T[_] : Traverse]
 (implicit P : Parallel[Context]){
-  def getParticles: Seq[Particle[V]]
+  def getParticles: List[Particle[V]]
   def counit: T[Particle[V]]
 
   def updateWithParticles(particles: T[Particle[V]]): Context[ParticlesState[V, Context, T]]
@@ -27,7 +27,7 @@ abstract class ParticlesState[V <: AlgebraicVector[V], Context[_] : Monad, T[_] 
       .flatMap(updateWithParticles)
   }
 
-  def mapParticlesPairs(mapFn: (Particle[V], ParticlesState[V, Context, T]) => Particle[V]): Context[ParticlesState[V, Context, T]] = {
+  def mapParticlesWithState(mapFn: (Particle[V], ParticlesState[V, Context, T]) => Particle[V]): Context[ParticlesState[V, Context, T]] = {
     mapWithState(_ => Context.pure(this))(p => s => Context.pure(mapFn(p, s)))
       .flatMap(updateWithParticles)
   }

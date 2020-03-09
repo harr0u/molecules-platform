@@ -14,7 +14,7 @@ class ParticlesStateReducer[V <: AlgebraicVector[V], C[_], T[_] : Traverse] exte
                                 (implicit C : Monad[C]): C[ParticlesState[V, C, T]] = {
     action.flatMap {
       case map: ParticleActionMap[V] => state.mapParticles(map.mapFn)
-      case reduce: ParticleActionReduce[V] => state.mapParticlesPairs {
+      case reduce: ParticleActionReduce[V] => state.mapParticlesWithState {
         (p: Particle[V], other: ParticlesState[V, C, T]) => other.getParticles.foldLeft(p)(reduce.reduceFn)
       }
     }

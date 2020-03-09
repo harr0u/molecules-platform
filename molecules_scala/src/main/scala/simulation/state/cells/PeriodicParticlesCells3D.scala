@@ -8,7 +8,7 @@ import domain.geometry.figures.CubicFigure
 import domain.geometry.vector.Vector3D
 import simulation.ParticlesState
 import state.state.cells.ParticlesCellsMetadata.Tuple3Same
-import state.state.cells.PeriodicParticleCells.ListList
+import state.state.cells.PeriodicParticlesCells.ListList
 
 import scala.collection.immutable.Seq
 
@@ -17,9 +17,7 @@ case class PeriodicParticlesCells3D[Context[_] : Monad](
                                            cellsMetadata: ParticlesCells3DMetadata,
                                            override val counit: ListList[Particle[Vector3D]],
                                            minimumCellLength: Double = 5.0
-)(implicit par : Parallel[Context]) extends PeriodicParticleCells[Vector3D, Context, Tuple3Same] {
-  override def getParticles: Seq[Particle[Vector3D]] = counit.flatten
-
+)(implicit par : Parallel[Context]) extends PeriodicParticlesCells[Vector3D, Context, Tuple3Same] {
   override def getAdjacentCells(flatIndex: Int): List[List[Particle[Vector3D]]] = {
     val (layersNumber: Int, rowsNumber: Int, cellsNumber: Int) = cellsMetadata.cellsNumber
 

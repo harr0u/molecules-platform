@@ -11,6 +11,14 @@ import cats.implicits._
 import org.specs2._
 
 class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Specification {
+  case class SingleParticleState[V <: AlgebraicVector[V]](particle: Particle[V]) extends ParticlesState[V, Id, Id] {
+    override def getParticles: List[Particle[V]] = List(particle)
+
+    override def counit: Particle[V] = particle
+
+    override def updateWithParticles(particles: Id[Particle[V]]): Id[ParticlesState[V, Id, Id]] = this.copy[V](particle = particles)
+  }
+
   "Should apply Actions consistently" >> {
     "position.x: 10 |> (+1) |> (*2) = 22" >> {
       val reducer = new ParticlesStateReducer[Vector2D, Id, Id]()
@@ -21,9 +29,8 @@ class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Speci
         UpdatePositions(p => p.position * 2),
       ))
 
-      newState.getParticles.length must_=== 1
-      newState.getParticles(0).position.x must_=== 22
-      newState.getParticles(0).position.y must_=== 26
+      newState.counit.position.x must_=== 22
+      newState.counit.position.y must_=== 26
     }
 
     "force.x: -5 |> (abs) |> (-5) = 0" >> {
@@ -35,16 +42,7 @@ class ParticlesStateReducerSpec(implicit ee: ExecutionEnv) extends mutable.Speci
        UpdatePositions(p => p.position - Vector2D(5, 5)),
       ))
 
-      newState.getParticles.length must_=== 1
-      newState.getParticles(0).position.x must_=== 0
+      newState.counit.position.x must_=== 0
     }
   }
-}
-
-case class SingleParticleState[V <: AlgebraicVector[V]](particle: Particle[V]) extends ParticlesState[V, Id, Id] {
-  override def getParticles: Seq[Particle[V]] = Seq(particle)
-
-  override def counit: Particle[V] = particle
-
-  override def updateWithParticles(particles: Id[Particle[V]]): Id[ParticlesState[V, Id, Id]] = this.copy[V](particle = particles)
 }
