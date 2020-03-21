@@ -11,9 +11,9 @@
 /molecules_cpp/data.csv
 /molecules_cpp/data_detailed.csv
 
-/molecules_scala/project
-/molecules_scala/.idea
-/molecules_scala/target
+/engine/project
+/engine/.idea
+/engine/target
 
-/molecules/__pycache__
-/molecules/env
+/acid/__pycache__
+/acid/env

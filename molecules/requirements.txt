@@ -1,6 +1,0 @@
-pygame==2.0.0.dev6
-numpy
-matplotlib
-pandas
-scikit-learn
-scipy
