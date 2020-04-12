@@ -1,19 +1,18 @@
+# mac os shit
 .DS_Store
 
+# IDEs shit
+.idea
+.vscode
 
-/.idea
-/.metals
-/.vscode
-/project
-/target
+# sbt shit
+.metals
+project
+target
 
-/molecules_cpp/.idea
-/molecules_cpp/data.csv
-/molecules_cpp/data_detailed.csv
+# python shit
+__pycache__
+env
 
-/engine/project
-/engine/.idea
-/engine/target
-
-/acid/__pycache__
-/acid/env
+# temporary
+/kafka_2.12-2.4.1

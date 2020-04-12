@@ -1,6 +1,6 @@
+import molecules.kafka
+import molecules.kafka.ProducerKafka
+
 object Molecules extends App {
-  def fn(a: AnyRef): Unit = {
-
-  }
-
+  ProducerKafka.writeToKafka("test")
 }

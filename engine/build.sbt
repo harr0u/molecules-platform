@@ -9,6 +9,8 @@ libraryDependencies += "org.typelevel" %% "cats-core" % "2.1.0"
 
 libraryDependencies ++= Seq("org.specs2" %% "specs2-core" % "4.8.3" % "test")
 
+libraryDependencies += "org.apache.kafka" % "kafka_2.12" % "2.1.0"
+
 scalacOptions in Test += "-Yrangepos"
 
 libraryDependencies  ++= Seq(
