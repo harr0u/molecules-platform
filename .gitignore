@@ -12,6 +12,7 @@ target
 
 # python shit
 __pycache__
+.ipynb_checkpoints
 env
 
 # temporary
